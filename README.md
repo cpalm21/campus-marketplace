@@ -39,3 +39,41 @@ There are no endpoints yet, so a request to `/` returns a 404 — that response 
 itself the sign the server is up.
 
 Other commands: `./mvnw test`, `./mvnw package` (jar lands in `backend/target/`).
+
+## Database deployment
+
+Database changes deploy to Supabase when pushed to `database_skeleton`.
+The workflow in `.github/workflows/deploy-database.yml` first rebuilds a local
+database from the migrations and sample seed, then deploys pending migrations.
+Pull requests run validation only. Manual deployment is available in GitHub
+Actions once the workflow is on the default branch; select `database_skeleton`
+when running it. Other branches cannot deploy through this workflow.
+
+Required repository Actions secrets: `SUPABASE_ACCESS_TOKEN`,
+`SUPABASE_DB_PASSWORD`, and `SUPABASE_PROJECT_ID` (the hosted project reference,
+not the local `project_id` in `config.toml`).
+
+Install the local CLI with `npm ci`, then link the project:
+
+```bash
+npx supabase login
+npx supabase link --project-ref YOUR_PROJECT_REF
+npx supabase migration list
+```
+
+Create each new database change with `npx supabase migration new change_name`
+and write the SQL in the generated file under `supabase/migrations/`. With Docker
+running, use `npx supabase db start` and `npx supabase db reset --local` to check
+the migrations and seed on your local database. Local reset deletes local data.
+Review `npx supabase db push --dry-run` before committing changes.
+
+`supabase/migrations/` is the source of deployed changes. The initial migration
+matches `backend/database/schema.sql`; editing that reference file alone does
+not deploy a database change. Add a new migration instead of editing one already
+applied. `backend/database/seed.sql` contains sample data for local development
+and validation; deployment does not upload it to the hosted database.
+
+If tables were created manually in an existing hosted project, reconcile its
+migration history before enabling deployment. Only mark a migration applied
+after confirming its SQL matches the existing schema. Do not run a database
+reset against the hosted project.
