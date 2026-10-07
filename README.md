@@ -67,11 +67,18 @@ running, use `npx supabase db start` and `npx supabase db reset --local` to chec
 the migrations and seed on your local database. Local reset deletes local data.
 Review `npx supabase db push --dry-run` before committing changes.
 
-`supabase/migrations/` is the source of deployed changes. The initial migration
-matches `backend/database/schema.sql`; editing that reference file alone does
-not deploy a database change. Add a new migration instead of editing one already
-applied. `backend/database/seed.sql` contains sample data for local development
-and validation; deployment does not upload it to the hosted database.
+`supabase/migrations/` is the source of deployed schema and data changes:
+
+- `20261005172915_create_marketplace_tables.sql` creates the nine marketplace tables.
+- `20261007143500_add_marketplace_reference_data.sql` inserts the universities and listing categories.
+
+Add a new migration instead of editing one already applied. Keep the timestamp
+prefix of applied migrations unchanged, even when renaming their descriptions.
+SQL files elsewhere in the repo do not automatically run during deployment.
+`supabase/seed.sql` contains demo users, listings, and related records for local
+validation. It runs after migrations during local reset and is not uploaded to
+the hosted database. To deploy additional data, add INSERT statements in a new
+migration and push it to `database_skeleton`.
 
 If tables were created manually in an existing hosted project, reconcile its
 migration history before enabling deployment. Only mark a migration applied
