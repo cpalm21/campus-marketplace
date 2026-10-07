@@ -16,3 +16,6 @@ Thumbs.db
 # Local environment overrides
 .env
 .env.local
+
+# Root-level Supabase CLI dependencies
+/node_modules/
