@@ -1,0 +1,466 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@500;600;700;800&display=swap");
+
+.campus-loop-signup {
+  --blue: #00539f;
+  --blue-dark: #003f7a;
+  --gold: #ffd200;
+  --black: #111111;
+  --muted: #626262;
+  --gray: #f5f5f5;
+  --border: #dedede;
+  min-width: 320px;
+  min-height: 100vh;
+  overflow: hidden;
+  color: var(--black);
+  background: #ffffff;
+  font-family: "DM Sans", sans-serif;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+.campus-loop-signup *,
+.campus-loop-signup *::before,
+.campus-loop-signup *::after {
+  box-sizing: border-box;
+}
+
+.campus-loop-signup h1,
+.campus-loop-signup p {
+  margin-top: 0;
+}
+
+.campus-loop-signup h1 {
+  font-family: "Manrope", sans-serif;
+}
+
+.campus-loop-signup button {
+  cursor: pointer;
+  font: inherit;
+}
+
+.campus-loop-signup a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.campus-loop-signup .container {
+  width: min(1180px, calc(100% - 48px));
+  margin-inline: auto;
+}
+
+.campus-loop-signup .site-header {
+  position: relative;
+  z-index: 20;
+  border-bottom: 1px solid var(--border);
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(16px);
+}
+
+.campus-loop-signup .nav-wrap {
+  display: flex;
+  min-height: 76px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 32px;
+}
+
+.campus-loop-signup .logo {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--black);
+  font-family: "Manrope", sans-serif;
+  font-size: 19px;
+  font-weight: 800;
+  text-decoration: none;
+  letter-spacing: -0.04em;
+}
+
+.campus-loop-signup .logo-mark {
+  display: grid;
+  width: 36px;
+  height: 36px;
+  place-items: center;
+  border-radius: 12px 12px 12px 4px;
+  color: var(--gold);
+  background: var(--blue);
+  box-shadow: 0 7px 16px rgba(0, 83, 159, 0.16);
+}
+
+.campus-loop-signup .nav-links,
+.campus-loop-signup .nav-actions {
+  display: flex;
+  align-items: center;
+}
+
+.campus-loop-signup .nav-links {
+  align-self: stretch;
+  gap: 34px;
+}
+
+.campus-loop-signup .nav-links a,
+.campus-loop-signup footer nav a {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  color: #494949;
+  font-size: 14px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.campus-loop-signup .nav-links a:hover,
+.campus-loop-signup footer nav a:hover {
+  color: var(--blue);
+}
+
+.campus-loop-signup .nav-actions {
+  gap: 10px;
+}
+
+.campus-loop-signup .button {
+  display: inline-flex;
+  min-height: 44px;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  border: 0;
+  border-radius: 14px;
+  padding: 0 21px;
+  font-size: 14px;
+  font-weight: 700;
+  text-decoration: none;
+  transition:
+    transform 160ms ease,
+    box-shadow 160ms ease,
+    background 160ms ease;
+}
+
+.campus-loop-signup .button:hover {
+  transform: translateY(-1px);
+}
+
+.campus-loop-signup .button-dark {
+  color: #ffffff;
+  background: var(--blue);
+  box-shadow: 0 8px 20px rgba(0, 83, 159, 0.16);
+}
+
+.campus-loop-signup .button-dark:hover {
+  background: var(--blue-dark);
+  box-shadow: 0 10px 24px rgba(0, 83, 159, 0.2);
+}
+
+.campus-loop-signup .button-ghost {
+  border: 1px solid var(--border);
+  color: var(--black);
+  background: #ffffff;
+}
+
+.campus-loop-signup .button-ghost:hover {
+  border-color: #bdbdbd;
+  background: var(--gray);
+}
+
+.campus-loop-signup .button-full {
+  width: 100%;
+}
+
+.campus-loop-signup .icon-button {
+  display: grid;
+  width: 42px;
+  height: 42px;
+  place-items: center;
+  border: 0;
+  border-radius: 50%;
+  color: var(--black);
+  background: transparent;
+}
+
+.campus-loop-signup .icon-button:hover {
+  color: var(--blue);
+  background: var(--gray);
+}
+
+.campus-loop-signup .menu-button {
+  display: none;
+}
+
+.campus-loop-signup .auth-page {
+  position: relative;
+  display: grid;
+  min-height: calc(100vh - 189px);
+  place-items: center;
+  overflow: hidden;
+  padding: 62px 20px 76px;
+  background:
+    radial-gradient(
+      circle at 12% 12%,
+      rgba(0, 83, 159, 0.07),
+      transparent 28%
+    ),
+    radial-gradient(
+      circle at 88% 84%,
+      rgba(255, 210, 0, 0.1),
+      transparent 25%
+    ),
+    var(--gray);
+}
+
+.campus-loop-signup .auth-page::before,
+.campus-loop-signup .auth-page::after {
+  position: absolute;
+  width: 120px;
+  height: 120px;
+  border: 2px dashed var(--blue);
+  border-radius: 50%;
+  content: "";
+  opacity: 0.35;
+}
+
+.campus-loop-signup .auth-page::before {
+  top: 12%;
+  left: 5%;
+}
+
+.campus-loop-signup .auth-page::after {
+  right: 6%;
+  bottom: 12%;
+  border-color: var(--gold);
+}
+
+.campus-loop-signup .auth-decoration {
+  position: absolute;
+  top: 16%;
+  right: 11%;
+  color: var(--blue);
+  transform: rotate(15deg);
+}
+
+.campus-loop-signup .auth-card {
+  position: relative;
+  z-index: 2;
+  width: min(560px, 100%);
+  border: 1px solid var(--border);
+  border-radius: 28px;
+  padding: 42px;
+  background: rgba(255, 255, 255, 0.97);
+  box-shadow: 0 24px 60px rgba(17, 17, 17, 0.12);
+}
+
+.campus-loop-signup .section-kicker {
+  color: var(--blue);
+  font-size: 12px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.campus-loop-signup .auth-card h1 {
+  margin: 8px 0 10px;
+  color: var(--black);
+  font-size: 36px;
+  font-weight: 800;
+  letter-spacing: -0.04em;
+}
+
+.campus-loop-signup .auth-intro {
+  margin-bottom: 28px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.campus-loop-signup .stack-form {
+  display: grid;
+  gap: 18px;
+}
+
+.campus-loop-signup .field {
+  display: grid;
+  gap: 7px;
+  color: var(--black);
+  font-size: 13px;
+  font-weight: 700;
+}
+
+.campus-loop-signup .field > input {
+  width: 100%;
+  height: 47px;
+  border: 1px solid var(--border);
+  border-radius: 13px;
+  outline: 0;
+  padding: 0 14px;
+  color: var(--black);
+  background: #ffffff;
+  font-size: 14px;
+  font-weight: 500;
+  transition:
+    border-color 150ms ease,
+    box-shadow 150ms ease;
+}
+
+.campus-loop-signup .field > input:focus {
+  border-color: var(--blue);
+  box-shadow: 0 0 0 3px rgba(0, 83, 159, 0.13);
+}
+
+.campus-loop-signup .field small {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.campus-loop-signup .field .field-error {
+  color: #a3261f;
+  font-weight: 700;
+}
+
+.campus-loop-signup .two-column-fields {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+}
+
+.campus-loop-signup .auth-switch {
+  margin: 24px 0 0;
+  color: var(--muted);
+  font-size: 13px;
+  text-align: center;
+}
+
+.campus-loop-signup .auth-switch a {
+  color: var(--blue);
+  font-weight: 800;
+}
+
+.campus-loop-signup footer {
+  border-top: 1px solid var(--border);
+  background: var(--gray);
+}
+
+.campus-loop-signup .footer-wrap {
+  display: flex;
+  min-height: 112px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 24px;
+}
+
+.campus-loop-signup .footer-wrap p {
+  margin: 0;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.campus-loop-signup footer nav {
+  display: flex;
+  gap: 25px;
+}
+
+@media (max-width: 760px) {
+  .campus-loop-signup .container {
+    width: min(100% - 32px, 620px);
+  }
+
+  .campus-loop-signup .nav-wrap {
+    min-height: 68px;
+  }
+
+  .campus-loop-signup .nav-links {
+    position: absolute;
+    top: 68px;
+    right: 16px;
+    left: 16px;
+    display: none;
+    height: auto;
+    flex-direction: column;
+    align-items: stretch;
+    gap: 0;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 10px;
+    background: #ffffff;
+    box-shadow: 0 15px 35px rgba(17, 17, 17, 0.15);
+  }
+
+  .campus-loop-signup .nav-links.open {
+    display: flex;
+  }
+
+  .campus-loop-signup .nav-links a {
+    border-radius: 10px;
+    padding: 12px;
+  }
+
+  .campus-loop-signup .compact-nav {
+    display: none;
+  }
+
+  .campus-loop-signup .menu-button {
+    display: grid;
+  }
+
+  .campus-loop-signup .footer-wrap {
+    flex-direction: column;
+    padding-block: 30px;
+  }
+}
+
+@media (max-width: 620px) {
+  .campus-loop-signup .auth-card {
+    padding: 30px 22px;
+  }
+
+  .campus-loop-signup .auth-card h1 {
+    font-size: 31px;
+  }
+
+  .campus-loop-signup .two-column-fields {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 460px) {
+  .campus-loop-signup footer nav {
+    flex-wrap: wrap;
+    justify-content: center;
+  }
+}
+
+/* Keep the Firebase form fields stacked inside the Figma card. */
+.campus-loop-signup .signup-fields {
+  display: grid;
+  gap: 18px;
+  min-width: 0;
+  margin: 0;
+  padding: 0;
+  border: 0;
+}
+
+.campus-loop-signup .signup-fields:disabled {
+  opacity: 0.75;
+}
+
+.campus-loop-signup .button:disabled {
+  cursor: not-allowed;
+  transform: none;
+}
+
+.campus-loop-signup .signup-feedback {
+  margin: 0;
+  border-radius: 12px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.campus-loop-signup .signup-error {
+  border: 1px solid #f2c7c3;
+  background: #fff2f0;
+  color: #a3261f;
+}
+
+.campus-loop-signup .signup-success {
+  border: 1px solid #a7dcc0;
+  background: #effaf4;
+  color: #17653e;
+}
