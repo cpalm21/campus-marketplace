@@ -162,7 +162,7 @@ function Header() {
           <a className="active" href="/" onClick={() => setOpen(false)}>
             Home
           </a>
-          <a href="/browse" onClick={() => setOpen(false)}>
+          <a href="#featured-items" onClick={() => setOpen(false)}>
             Browse
           </a>
         </nav>
@@ -193,10 +193,10 @@ function ItemCard({ listing }: { listing: FeaturedListing }) {
 
   return (
     <article className="listing-card">
-      <a className="listing-image" href={`/items/${listing.id}`}>
+      <div className="listing-image">
         <img src={listing.image} alt={listing.title} />
         <span className="category-pill">{listing.category}</span>
-      </a>
+      </div>
       <button
         className={saved ? "favorite active" : "favorite"}
         type="button"
@@ -205,7 +205,7 @@ function ItemCard({ listing }: { listing: FeaturedListing }) {
       >
         <Icon name="heart" size={19} />
       </button>
-      <a className="listing-body" href={`/items/${listing.id}`}>
+      <div className="listing-body">
         <div className="listing-title-row">
           <h3>{listing.title}</h3>
           <strong>${listing.price}</strong>
@@ -215,7 +215,7 @@ function ItemCard({ listing }: { listing: FeaturedListing }) {
           <Icon name="map" size={15} />
           {listing.location}
         </div>
-      </a>
+      </div>
     </article>
   )
 }
@@ -227,9 +227,9 @@ function Footer() {
         <Logo />
         <p>Making University of Delaware living lighter, together.</p>
         <nav>
-          <a href="/browse">Marketplace</a>
+          <a href="#featured-items">Marketplace</a>
           <a href="/signup">Join</a>
-          <a href="/settings">Account</a>
+          <a href="/login">Account</a>
         </nav>
       </div>
     </footer>
@@ -262,7 +262,7 @@ export default function LandingPage() {
                 essentials.
               </p>
               <div className="button-row hero-buttons">
-                <a className="button button-dark button-large" href="/browse">
+                <a className="button button-dark button-large" href="#featured-items">
                   Browse marketplace <Icon name="arrow" size={18} />
                 </a>
                 <a className="button button-ghost button-large" href="/signup">
@@ -320,16 +320,13 @@ export default function LandingPage() {
           </div>
         </section>
 
-        <section className="featured-section">
+        <section className="featured-section" id="featured-items">
           <div className="container">
             <div className="section-heading">
               <div>
                 <span className="section-kicker">Fresh on campus</span>
                 <h2>Featured items</h2>
               </div>
-              <a className="text-link" href="/browse">
-                View everything <Icon name="arrow" size={18} />
-              </a>
             </div>
             <div className="listing-grid">
               {featuredListings.map((listing) => (
@@ -347,7 +344,7 @@ export default function LandingPage() {
               </span>
               <h2>One student's extra is another student's essential.</h2>
             </div>
-            <a className="button button-light" href="/listings/new">
+            <a className="button button-light" href="/signup">
               List an item <Icon name="arrow" size={18} />
             </a>
           </div>
