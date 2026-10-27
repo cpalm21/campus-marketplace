@@ -1,6 +1,7 @@
 // React state keeps track of the form values and open menus.
 import { useState } from "react"
-import type { ReactNode, SubmitEvent } from "react"
+import type { FormEvent, ReactNode } from "react"
+import { getAuthErrorMessage, resetPassword, signIn } from "./authService"
 import "./loginpage.css"
 
 // Draw one of the small icons used on this page.
@@ -139,29 +140,66 @@ export default function LoginPage() {
   // Store what the user types and any errors shown below the inputs.
   const [form, setForm] = useState({ email: "", password: "" })
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [loginError, setLoginError] = useState("")
+  const [isSubmitting, setIsSubmitting] = useState(false)
   // Control the reset popup and its confirmation message.
   const [resetOpen, setResetOpen] = useState(false)
+  const [resetEmail, setResetEmail] = useState("")
+  const [resetError, setResetError] = useState("")
   const [resetSent, setResetSent] = useState(false)
+  const [isResetting, setIsResetting] = useState(false)
 
   // Run when the user submits the login form.
-  function submit(event: SubmitEvent<HTMLFormElement>) {
-    // Keep the browser from reloading the page when the form is submitted.
+  async function submit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault()
-    // These are basic checks only: an @ in the email and a nonempty password.
     const nextErrors: Record<string, string> = {}
     if (!form.email.includes("@")) nextErrors.email = "Enter a valid email."
     if (!form.password) nextErrors.password = "Enter your password."
     setErrors(nextErrors)
+    setLoginError("")
 
-    if (Object.keys(nextErrors).length === 0) {
-      // Demo login only. This does not check an account or verify a password.
-      // Replace this with real authentication when connecting the backend.
-      window.localStorage.setItem("campusloop-signed-in", "true")
-      // Read the requested destination from the URL, or use /browse.
-      // Before real use, validate this destination; // can lead to another site.
-      const next = new URLSearchParams(window.location.search).get("next")
-      window.location.assign(next?.startsWith("/") ? next : "/browse")
+    if (Object.keys(nextErrors).length === 0 && !isSubmitting) {
+      setIsSubmitting(true)
+      try {
+        await signIn(form.email, form.password)
+        window.localStorage.setItem("campusloop-signed-in", "true")
+        const requested = new URLSearchParams(window.location.search).get("next")
+        const safeNext = requested?.startsWith("/") && !requested.startsWith("//")
+          ? requested
+          : "/browse"
+        window.location.assign(safeNext)
+      } catch (error) {
+        setLoginError(getAuthErrorMessage(error))
+      } finally {
+        setIsSubmitting(false)
+      }
     }
+  }
+
+  async function sendResetLink() {
+    const email = resetEmail.trim()
+    if (!email.toLowerCase().endsWith("@udel.edu")) {
+      setResetError("Enter a valid University of Delaware email.")
+      return
+    }
+
+    setResetError("")
+    setIsResetting(true)
+    try {
+      await resetPassword(email)
+      setResetSent(true)
+    } catch (error) {
+      setResetError(getAuthErrorMessage(error))
+    } finally {
+      setIsResetting(false)
+    }
+  }
+
+  function openReset() {
+    setResetEmail(form.email)
+    setResetError("")
+    setResetSent(false)
+    setResetOpen(true)
   }
 
   return (
@@ -201,13 +239,14 @@ export default function LoginPage() {
                 placeholder="Your password"
               />
             </Field>
-            <button className="button button-dark button-full" type="submit">
-              Log in
+            {loginError && <p className="field-error" role="alert">{loginError}</p>}
+            <button className="button button-dark button-full" type="submit" disabled={isSubmitting}>
+              {isSubmitting ? "Logging in..." : "Log in"}
             </button>
             <button
               className="plain-link"
               type="button"
-              onClick={() => setResetOpen(true)}
+              onClick={openReset}
             >
               Forgot your password?
             </button>
@@ -238,25 +277,32 @@ export default function LoginPage() {
             <p>
               Enter your university email and we'll send reset instructions.
             </p>
-            {/* Demo only: this switches the message but does not send an email. */}
             {resetSent ? (
               <div className="success-notice" role="status">
                 <Icon name="check" size={18} />
                 Reset request sent. Check your inbox.
               </div>
             ) : (
-              <Field label="University email">
-                <input type="email" placeholder="alex@udel.edu" />
+              <Field label="University email" error={resetError}>
+                <input
+                  type="email"
+                  value={resetEmail}
+                  onChange={(event) => setResetEmail(event.target.value)}
+                  placeholder="alex@udel.edu"
+                />
               </Field>
             )}
             <div className="button-row">
-              <button
-                className="button button-dark"
-                type="button"
-                onClick={() => setResetSent(true)}
-              >
-                Send reset link
-              </button>
+              {!resetSent && (
+                <button
+                  className="button button-dark"
+                  type="button"
+                  onClick={sendResetLink}
+                  disabled={isResetting}
+                >
+                  {isResetting ? "Sending..." : "Send reset link"}
+                </button>
+              )}
               <button
                 className="button button-ghost"
                 type="button"

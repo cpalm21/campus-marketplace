@@ -1,6 +1,9 @@
 import {
     createUserWithEmailAndPassword,
     sendEmailVerification,
+    sendPasswordResetEmail,
+    signInWithEmailAndPassword,
+    signOut,
 } from "firebase/auth";
 import type { User } from "firebase/auth";
 import { auth } from "./firebase";
@@ -22,7 +25,7 @@ async function registerProfile(user: User): Promise<void> {
     const response = await fetch("/api/users/register", {
         method: "POST",
         headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: "Bearer " + token,
         },
     });
 
@@ -76,4 +79,42 @@ export async function signUp(
     }
 
     return result.user;
+}
+export function getAuthErrorMessage(error: unknown): string {
+    const code = error instanceof Error && "code" in error
+        ? String(error.code)
+        : "";
+
+    switch (code) {
+        case "auth/user-not-found":
+            return "Account not found.";
+        case "auth/wrong-password":
+        case "auth/invalid-password":
+            return "Incorrect password.";
+        case "auth/invalid-credential":
+            return "Incorrect email or password.";
+        case "auth/invalid-email":
+            return "Enter a valid University of Delaware email.";
+        case "auth/too-many-requests":
+            return "Too many attempts. Please try again later.";
+        case "auth/network-request-failed":
+            return "Network error. Check your connection and try again.";
+        default:
+            return error instanceof Error ? error.message : "Authentication failed. Please try again.";
+    }
+}
+
+export async function signIn(email: string, password: string): Promise<User> {
+    const result = await signInWithEmailAndPassword(auth, email.trim(), password);
+
+    if (!result.user.emailVerified) {
+        await signOut(auth);
+        throw new Error("Verify your email before logging in. Check your UD inbox.");
+    }
+
+    return result.user;
+}
+
+export async function resetPassword(email: string): Promise<void> {
+    await sendPasswordResetEmail(auth, email.trim());
 }
