@@ -1,6 +1,7 @@
 import {
     createUserWithEmailAndPassword,
     sendEmailVerification,
+    sendPasswordResetEmail,
     signInWithEmailAndPassword,
     signOut
 } from "firebase/auth";
@@ -24,7 +25,7 @@ async function registerProfile(user: User): Promise<void> {
     const response = await fetch("/api/users/register", {
         method: "POST",
         headers: {
-            Authorization: `Bearer ${token}`,
+            Authorization: "Bearer " + token,
         },
     });
 
@@ -127,4 +128,8 @@ export async function logIn(
     }
 
     return result.user;
+}
+
+export async function resetPassword(email: string): Promise<void> {
+    await sendPasswordResetEmail(auth, email.trim());
 }

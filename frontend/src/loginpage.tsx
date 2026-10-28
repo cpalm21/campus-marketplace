@@ -3,7 +3,7 @@ import { useState } from "react"
 import type { ReactNode, SubmitEvent } from "react"
 import "./loginpage.css"
 import { FirebaseError } from "firebase/app"
-import { logIn } from "./authService"
+import { logIn, resetPassword } from "./authService"
 
 // Draw one of the small icons used on this page.
 function Icon({
@@ -144,7 +144,10 @@ export default function LoginPage() {
   const [isSubmitting, setIsSubmitting] = useState(false)
   // Control the reset popup and its confirmation message.
   const [resetOpen, setResetOpen] = useState(false)
+  const [resetEmail, setResetEmail] = useState("")
+  const [resetError, setResetError] = useState("")
   const [resetSent, setResetSent] = useState(false)
+  const [isResetting, setIsResetting] = useState(false)
 
   // Run when the user submits the login form.
   async function submit(event: SubmitEvent<HTMLFormElement>) {
@@ -223,7 +226,32 @@ export default function LoginPage() {
       }
     }
   }
-  
+
+  async function sendResetLink() {
+    const email = resetEmail.trim()
+    if (!email.toLowerCase().endsWith("@udel.edu")) {
+      setResetError("Enter a valid University of Delaware email.")
+      return
+    }
+
+    setResetError("")
+    setIsResetting(true)
+    try {
+      await resetPassword(email)
+      setResetSent(true)
+    } catch (error) {
+      setResetError(error instanceof Error ? error.message : "Could not send the reset email.")
+    } finally {
+      setIsResetting(false)
+    }
+  }
+
+  function openReset() {
+    setResetEmail(form.email)
+    setResetError("")
+    setResetSent(false)
+    setResetOpen(true)
+  }
 
   return (
     <div className="campus-loop-login">
@@ -277,7 +305,7 @@ export default function LoginPage() {
             <button
               className="plain-link"
               type="button"
-              onClick={() => setResetOpen(true)}
+              onClick={openReset}
             >
               Forgot your password?
             </button>
@@ -308,25 +336,32 @@ export default function LoginPage() {
             <p>
               Enter your university email and we'll send reset instructions.
             </p>
-            {/* Demo only: this switches the message but does not send an email. */}
             {resetSent ? (
               <div className="success-notice" role="status">
                 <Icon name="check" size={18} />
                 Reset request sent. Check your inbox.
               </div>
             ) : (
-              <Field label="University email">
-                <input type="email" placeholder="alex@udel.edu" />
+              <Field label="University email" error={resetError}>
+                <input
+                  type="email"
+                  value={resetEmail}
+                  onChange={(event) => setResetEmail(event.target.value)}
+                  placeholder="alex@udel.edu"
+                />
               </Field>
             )}
             <div className="button-row">
-              <button
-                className="button button-dark"
-                type="button"
-                onClick={() => setResetSent(true)}
-              >
-                Send reset link
-              </button>
+              {!resetSent && (
+                <button
+                  className="button button-dark"
+                  type="button"
+                  onClick={sendResetLink}
+                  disabled={isResetting}
+                >
+                  {isResetting ? "Sending..." : "Send reset link"}
+                </button>
+              )}
               <button
                 className="button button-ghost"
                 type="button"
