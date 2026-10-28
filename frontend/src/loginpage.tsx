@@ -2,6 +2,8 @@
 import { useState } from "react"
 import type { ReactNode, SubmitEvent } from "react"
 import "./loginpage.css"
+import { FirebaseError } from "firebase/app"
+import { logIn } from "./authService"
 
 // Draw one of the small icons used on this page.
 function Icon({
@@ -139,14 +141,16 @@ export default function LoginPage() {
   // Store what the user types and any errors shown below the inputs.
   const [form, setForm] = useState({ email: "", password: "" })
   const [errors, setErrors] = useState<Record<string, string>>({})
+  const [isSubmitting, setIsSubmitting] = useState(false)
   // Control the reset popup and its confirmation message.
   const [resetOpen, setResetOpen] = useState(false)
   const [resetSent, setResetSent] = useState(false)
 
   // Run when the user submits the login form.
-  function submit(event: SubmitEvent<HTMLFormElement>) {
+  async function submit(event: SubmitEvent<HTMLFormElement>) {
     // Keep the browser from reloading the page when the form is submitted.
     event.preventDefault()
+    if (isSubmitting) return
     // These are basic checks only: an @ in the email and a nonempty password.
     const nextErrors: Record<string, string> = {}
     if (!form.email.includes("@")) nextErrors.email = "Enter a valid email."
@@ -154,15 +158,72 @@ export default function LoginPage() {
     setErrors(nextErrors)
 
     if (Object.keys(nextErrors).length === 0) {
-      // Demo login only. This does not check an account or verify a password.
-      // Replace this with real authentication when connecting the backend.
-      window.localStorage.setItem("campusloop-signed-in", "true")
-      // Read the requested destination from the URL, or use /browse.
-      // Before real use, validate this destination; // can lead to another site.
-      const next = new URLSearchParams(window.location.search).get("next")
-      window.location.assign(next?.startsWith("/") ? next : "/browse")
+      //show the loading state while Firebase checks the account.
+      setIsSubmitting(true)
+
+      try {
+        // check credentials and email verification.
+        await logIn(form.email, form.password)
+
+        // Remove any leftover flag from the demo login.
+        window.localStorage.removeItem("campusloop-signed-in")
+
+        // Read the requested destination from the URL, or use /browse.
+        const next = new URLSearchParams(window.location.search).get("next")
+
+        // validate the destination so it stays on the site.
+        let destination = "/browse"
+
+        if (next?.startsWith("/")) {
+          try {
+            const url = new URL(next, window.location.origin)
+
+            if (url.origin === window.location.origin) {
+              destination = url.pathname + url.search + url.hash
+            }
+          } catch {
+            // Keep /browse if the destination is invalid.
+          }
+        }
+
+        window.location.assign(destination)
+      } catch (err) {
+        // display a readable message when login fails.
+        let message = "Could not log in. Please try again."
+
+        if (err instanceof FirebaseError) {
+          switch (err.code) {
+            case "auth/invalid-credential":
+            case "auth/user-not-found":
+            case "auth/wrong-password":
+              message = "Invalid email or password."
+              break
+            case "auth/invalid-email":
+              message = "Enter a valid email."
+              break
+            case "auth/too-many-requests":
+              message = "Too many attempts. Please try again later."
+              break
+            case "auth/network-request-failed":
+              message = "Could not connect. Check your internet connection."
+              break
+            case "auth/user-disabled":
+              message = "This account has been disabled."
+              break
+          }
+        } else if (err instanceof Error) {
+          // Includes UD-email and verification messages.
+          message = err.message
+        }
+
+        setErrors({ general: message })
+      } finally {
+        // allow another attempt after the request finishes.
+        setIsSubmitting(false)
+      }
     }
   }
+  
 
   return (
     <div className="campus-loop-login">
@@ -201,8 +262,17 @@ export default function LoginPage() {
                 placeholder="Your password"
               />
             </Field>
-            <button className="button button-dark button-full" type="submit">
-              Log in
+            {errors.general && (
+              <p className="login-error" role="alert">
+                {errors.general}
+              </p>
+            )}
+            <button
+              className="button button-dark button-full"
+              type="submit"
+              disabled={isSubmitting}
+            >
+              {isSubmitting ? "Logging in..." : "Log in"}
             </button>
             <button
               className="plain-link"
