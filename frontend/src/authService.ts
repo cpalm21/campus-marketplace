@@ -3,7 +3,7 @@ import {
     sendEmailVerification,
     sendPasswordResetEmail,
     signInWithEmailAndPassword,
-    signOut,
+    signOut
 } from "firebase/auth";
 import type { User } from "firebase/auth";
 import { auth } from "./firebase";
@@ -80,36 +80,51 @@ export async function signUp(
 
     return result.user;
 }
-export function getAuthErrorMessage(error: unknown): string {
-    const code = error instanceof Error && "code" in error
-        ? String(error.code)
-        : "";
 
-    switch (code) {
-        case "auth/user-not-found":
-            return "Account not found.";
-        case "auth/wrong-password":
-        case "auth/invalid-password":
-            return "Incorrect password.";
-        case "auth/invalid-credential":
-            return "Incorrect email or password.";
-        case "auth/invalid-email":
-            return "Enter a valid University of Delaware email.";
-        case "auth/too-many-requests":
-            return "Too many attempts. Please try again later.";
-        case "auth/network-request-failed":
-            return "Network error. Check your connection and try again.";
-        default:
-            return error instanceof Error ? error.message : "Authentication failed. Please try again.";
+// Signs in an existing user and requires a verified UD email.
+export async function logIn(
+    email: string,
+    password: string
+): Promise<User> {
+    const normalizedEmail = email.trim();
+    const emailParts = normalizedEmail.split("@");
+
+    if (
+        emailParts.length !== 2 ||
+        emailParts[1].toLowerCase() !== "udel.edu"
+    ) {
+        throw new Error("Please use your University of Delaware email.");
     }
-}
 
-export async function signIn(email: string, password: string): Promise<User> {
-    const result = await signInWithEmailAndPassword(auth, email.trim(), password);
+    if (!password) {
+        throw new Error("Enter your password.");
+    }
 
+    // Firebase checks whether the email and password are correct.
+    const result = await signInWithEmailAndPassword(
+        auth,
+        normalizedEmail,
+        password
+    );
+
+    // A correct password alone does not mean the email is verified.
     if (!result.user.emailVerified) {
         await signOut(auth);
-        throw new Error("Verify your email before logging in. Check your UD inbox.");
+        throw new Error(
+            "Please verify your UD email before logging in. Check your inbox for the verification link."
+        );
+    }
+
+    // Retry profile creation in case it failed during signup.
+    // Your existing code describes this endpoint as idempotent:
+    // calling it again should not create a duplicate profile.
+    try {
+        await registerProfile(result.user);
+    } catch (err) {
+        console.warn(
+            "Signed in to Firebase, but could not sync the backend profile.",
+            err
+        );
     }
 
     return result.user;
