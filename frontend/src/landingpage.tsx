@@ -162,7 +162,7 @@ function Header() {
           <a className="active" href="/" onClick={() => setOpen(false)}>
             Home
           </a>
-          <a href="#featured-items" onClick={() => setOpen(false)}>
+          <a href="/browse" onClick={() => setOpen(false)}>
             Browse
           </a>
         </nav>
@@ -227,7 +227,7 @@ function Footer() {
         <Logo />
         <p>Making University of Delaware living lighter, together.</p>
         <nav>
-          <a href="#featured-items">Marketplace</a>
+          <a href="/browse">Marketplace</a>
           <a href="/signup">Join</a>
           <a href="/login">Account</a>
         </nav>
@@ -262,7 +262,7 @@ export default function LandingPage() {
                 essentials.
               </p>
               <div className="button-row hero-buttons">
-                <a className="button button-dark button-large" href="#featured-items">
+                <a className="button button-dark button-large" href="/browse">
                   Browse marketplace <Icon name="arrow" size={18} />
                 </a>
                 <a className="button button-ghost button-large" href="/signup">
