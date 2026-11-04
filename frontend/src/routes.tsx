@@ -2,6 +2,7 @@ import { createBrowserRouter } from "react-router"
 import App from "./App"
 import LandingPage from "./landingpage"
 import LoginPage from "./loginpage";
+import Browse from "./Browse";
 
 export const router = createBrowserRouter([
   {
@@ -18,6 +19,6 @@ export const router = createBrowserRouter([
   },
   {
     path: "/browse",
-    Component: LandingPage
+    Component: Browse
   },
 ])
