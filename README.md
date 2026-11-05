@@ -9,7 +9,7 @@ The repo is a monorepo with two independent apps:
 | `frontend/` | React + TypeScript SPA, built with Vite     |
 | `backend/`  | Java 21 + Spring Boot REST API, built with Maven |
 
-The two do not talk to each other yet — each just runs on its own.
+The frontend proxies `/api` requests to the backend during local development.
 
 ## Prerequisites
 
@@ -35,10 +35,38 @@ cd backend
 ./mvnw spring-boot:run    # http://localhost:8080
 ```
 
-There are no endpoints yet, so a request to `/` returns a 404 — that response is
-itself the sign the server is up.
+The public lookup endpoints return JSON arrays, sorted alphabetically:
+
+- `GET /api/categories`: `categoryId` and `name`.
+- `GET /api/universities`: `universityId`, `universityName`, `city`, and `stateInitials`.
+
+These read from PostgreSQL using Spring JDBC. Defaults connect to local Supabase
+at `localhost:54322` with the local `postgres` credentials. Start local Supabase
+and apply the migrations before requesting lookup data. An unavailable database
+returns HTTP 503 from these endpoints; Firebase credentials are not required for them.
+
+For a hosted Supabase project, set these environment variables before starting
+the backend (the application does not automatically load `.env` files):
+
+```bash
+export DATABASE_URL='jdbc:postgresql://YOUR_POOLER_HOST:5432/postgres?sslmode=require'
+export DATABASE_USERNAME='postgres.YOUR_PROJECT_REF'
+export DATABASE_PASSWORD='YOUR_DATABASE_PASSWORD'
+```
+
+Copy the session pooler host and username from Supabase's **Connect** dialog.
+Use a direct connection instead if your backend supports the project's IPv6
+endpoint. Keep passwords in the environment. The backend never applies schema
+migrations or sample seed data at startup.
 
 Other commands: `./mvnw test`, `./mvnw package` (jar lands in `backend/target/`).
+
+The **Backend CI** workflow runs Java 21 tests on backend or migration pushes and
+PRs to `main`. It creates a disposable PostgreSQL 17 database and applies all SQL
+migrations without production secrets or Firebase credentials. Controller and
+authentication tests can run locally without a database. PostgreSQL integration
+tests run when `DATABASE_URL` is set, using a database initialized with the repo's
+migrations and reference data; these tests only read data.
 
 ## Database deployment
 

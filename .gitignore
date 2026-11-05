@@ -17,5 +17,11 @@ Thumbs.db
 .env
 .env.local
 
+# Firebase service account keys. These grant full admin access to the Firebase
+# project, so they are supplied per developer through
+# GOOGLE_APPLICATION_CREDENTIALS and must never be committed.
+*serviceaccount*.json
+firebase-adminsdk*.json
+
 # Root-level Supabase CLI dependencies
 /node_modules/
