@@ -4,7 +4,13 @@
 -- USERS
 -- ============================================
 
+-- firebase_uid is NOT NULL and UNIQUE, so every demo user needs one. These
+-- placeholders are deliberately not real Firebase UIDs: signing in as one of
+-- these users is impossible, which is what we want for demo data.
+-- password_hash is still populated only because these rows predate Firebase;
+-- registration never writes it.
 INSERT INTO users (
+    firebase_uid,
     first_name,
     last_name,
     email,
@@ -14,6 +20,7 @@ INSERT INTO users (
 )
 VALUES
 (
+    'fake_uid_sean',
     'Sean',
     'Smith',
     'sean.smith@example.com',
@@ -26,6 +33,7 @@ VALUES
     NULL
 ),
 (
+    'fake_uid_emma',
     'Emma',
     'Judd',
     'emma.judd@example.com',
@@ -38,6 +46,7 @@ VALUES
     NULL
 ),
 (
+    'fake_uid_christian',
     'Christian',
     'Palmer',
     'christian.palmer@example.com',
@@ -50,6 +59,7 @@ VALUES
     NULL
 ),
 (
+    'fake_uid_mia',
     'Mia',
     'Pfaff',
     'mia.pfaff@example.com',
@@ -62,6 +72,7 @@ VALUES
     NULL
 ),
 (
+    'fake_uid_yazan',
     'Yazan',
     'Alsuraibi',
     'yazan.alsuraibi@example.com',
