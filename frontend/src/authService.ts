@@ -47,24 +47,20 @@ export async function signUp(
 ): Promise<User> {
     const normalizedEmail = email.trim();
     const emailParts = normalizedEmail.split("@");
-
     if (
         emailParts.length !== 2 ||
         emailParts[1].toLowerCase() !== "udel.edu"
     ) {
         throw new Error("Please use your University of Delaware email.");
     }
-
     if (password !== confirmPassword) {
         throw new Error("Passwords do not match.");
     }
-
     const result = await createUserWithEmailAndPassword(
         auth,
         normalizedEmail,
         password
     );
-
     await sendEmailVerification(result.user);
 
     // Deliberately non-fatal. The Firebase account already exists by this
