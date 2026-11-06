@@ -1,3 +1,4 @@
+import { authLink } from "./authDestination"
 // React state keeps track of the form values and open menus.
 import { useState } from "react"
 import type { ReactNode, SubmitEvent } from "react"
@@ -78,10 +79,10 @@ function Header() {
           </a>
         </nav>
         <div className="nav-actions">
-          <a className="button button-ghost compact-nav" href="/login">
+          <a className="button button-ghost compact-nav" href={authLink("/login")}>
             Log in
           </a>
-          <a className="button button-dark compact-nav" href="/signup">
+          <a className="button button-dark compact-nav" href={authLink("/signup")}>
             Join campus
           </a>
           <button
@@ -108,7 +109,7 @@ function Footer() {
         <p>Making University of Delaware living lighter, together.</p>
         <nav>
           <a href="/browse">Marketplace</a>
-          <a href="/signup">Join</a>
+          <a href={authLink("/signup")}>Join</a>
           <a href="/settings">Account</a>
         </nav>
       </div>
@@ -311,7 +312,7 @@ export default function LoginPage() {
             </button>
           </form>
           <p className="auth-switch">
-            New to CampusLoop? <a href="/signup">Sign up</a>
+            New to CampusLoop? <a href={authLink("/signup")}>Sign up</a>
           </p>
         </section>
       </main>
