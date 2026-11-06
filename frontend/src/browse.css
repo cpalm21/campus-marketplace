@@ -1,0 +1,87 @@
+@import url("https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Manrope:wght@600;700;800&display=swap");
+
+.browse-page { --blue:#00539f; --blue-dark:#003f7a; --gold:#ffd200; --ink:#171717; --muted:#686868; --border:#e1e3e6; min-height:100vh; background:#fff; color:var(--ink); font-family:"DM Sans",sans-serif; }
+.browse-page *,.browse-page *::before,.browse-page *::after { box-sizing:border-box; }
+.browse-page a { color:inherit; text-decoration:none; }
+.browse-page button,.browse-page input,.browse-page select { font:inherit; }
+.browse-page .browse-container { width:min(1180px,calc(100% - 48px)); margin-inline:auto; }
+.browse-page .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
+:root:has(.browse-page) #root { width:100%; max-width:none; margin:0; text-align:left; border:0; display:block; }
+
+.browse-header { position:relative; z-index:20; border-bottom:1px solid var(--border); background:#fff; }
+.browse-nav { min-height:76px; display:flex; align-items:center; justify-content:space-between; gap:32px; }
+.browse-logo { display:flex; align-items:center; gap:10px; font-family:"Manrope",sans-serif; font-size:19px; font-weight:800; letter-spacing:-.04em; }
+.browse-logo-mark { width:36px; height:36px; display:grid; place-items:center; color:var(--gold); background:var(--blue); border-radius:12px 12px 12px 4px; }
+.browse-nav-links { display:flex; align-self:stretch; align-items:center; gap:34px; }
+.browse-nav-links a { position:relative; color:#505050; font-size:14px; font-weight:600; }
+.browse-nav-links a:hover,.browse-nav-links a.active { color:var(--blue); }
+.browse-nav-links a.active::after { content:""; position:absolute; right:0; bottom:-27px; left:0; height:3px; background:var(--blue); }
+.browse-nav-actions { display:flex; align-items:center; gap:10px; }
+.browse-button { min-height:44px; display:inline-flex; align-items:center; justify-content:center; border-radius:12px; padding:0 18px; font-size:14px; font-weight:700; }
+.browse-button.ghost { border:1px solid var(--border); }
+.browse-menu-button { display:none; width:42px; height:42px; place-items:center; border:0; border-radius:50%; color:var(--ink); background:transparent; }
+
+.browse-intro { padding:52px 0 32px; background:linear-gradient(180deg,#f7f9fc 0%,#fff 100%); }
+.browse-eyebrow { color:var(--blue); font-size:12px; font-weight:800; letter-spacing:.12em; text-transform:uppercase; }
+.browse-intro h1 { max-width:760px; margin:8px 0 28px; font-family:"Manrope",sans-serif; font-size:44px; line-height:1.08; letter-spacing:-.045em; }
+.browse-search { height:58px; display:flex; align-items:center; gap:12px; max-width:760px; border:1px solid var(--border); border-radius:16px; padding:0 18px; background:#fff; box-shadow:0 12px 34px rgba(20,34,55,.07); }
+.browse-search svg { flex:none; color:#777; }
+.browse-search input { min-width:0; width:100%; border:0; outline:0; color:var(--ink); background:transparent; font-size:16px; }
+.browse-search input::placeholder { color:#949494; }
+
+.browse-results { padding:22px 0 72px; }
+.category-row { display:flex; gap:10px; overflow-x:auto; padding-bottom:4px; scrollbar-width:none; }
+.category-row::-webkit-scrollbar { display:none; }
+.category-chip { flex:none; min-height:38px; border:1px solid var(--border); border-radius:999px; padding:0 16px; color:#555; background:#fff; font-size:13px; font-weight:700; cursor:pointer; }
+.category-chip:hover { border-color:#aeb7c3; }
+.category-chip.active { border-color:var(--blue); color:#fff; background:var(--blue); }
+.results-toolbar { min-height:68px; display:flex; align-items:center; justify-content:space-between; gap:20px; border-bottom:1px solid var(--border); color:#666; font-size:14px; }
+.results-toolbar strong { color:var(--ink); }
+.browse-filters { display:flex; gap:10px; }
+.browse-filters label { height:40px; display:flex; align-items:center; gap:5px; border:1px solid var(--border); border-radius:10px; padding-left:10px; background:#fff; }
+.browse-filters select { height:38px; border:0; outline:0; padding:0 30px 0 4px; color:#444; background:#fff; font-size:13px; font-weight:600; }
+
+.marketplace-grid { display:grid; grid-template-columns:repeat(4,minmax(0,1fr)); gap:24px; padding-top:28px; }
+.marketplace-card { position:relative; min-width:0; border:1px solid var(--border); border-radius:18px; overflow:hidden; background:#fff; transition:transform .18s ease,box-shadow .18s ease; }
+.marketplace-card:hover { transform:translateY(-3px); box-shadow:0 16px 36px rgba(25,35,50,.1); }
+.marketplace-image { position:relative; display:block; aspect-ratio:1.16; overflow:hidden; background:#eee; }
+.marketplace-image img { width:100%; height:100%; object-fit:cover; transition:transform .35s ease; }
+.marketplace-card:hover .marketplace-image img { transform:scale(1.025); }
+.marketplace-image span { position:absolute; bottom:12px; left:12px; border-radius:999px; padding:5px 10px; color:#fff; background:rgba(17,17,17,.78); backdrop-filter:blur(6px); font-size:11px; font-weight:700; }
+.marketplace-favorite { position:absolute; top:12px; right:12px; width:38px; height:38px; display:grid; place-items:center; border:0; border-radius:50%; color:#555; background:rgba(255,255,255,.94); box-shadow:0 4px 16px rgba(0,0,0,.12); cursor:pointer; }
+.marketplace-favorite.active { color:#fff; fill:#00539f; background:var(--blue); }
+.marketplace-card-body { position:relative; min-height:135px; padding:16px 17px; }
+.marketplace-card-body h2 { margin:0 34px 8px 0; color:var(--ink); font-family:"Manrope",sans-serif; font-size:16px; line-height:1.25; }
+.marketplace-card-body h2:hover { color:var(--blue); }
+.marketplace-price { position:absolute; top:15px; right:17px; color:var(--blue); font-family:"Manrope",sans-serif; font-size:16px; }
+.marketplace-card-body p { margin:0 0 13px; color:#777; font-size:13px; }
+.marketplace-card-body div { display:flex; align-items:center; gap:5px; color:#666; font-size:12px; }
+.browse-empty { margin-top:28px; padding:56px 20px; text-align:center; border-radius:18px; background:#f6f7f9; }
+.browse-empty h2 { margin:0 0 6px; font-family:"Manrope",sans-serif; }
+.browse-empty p { color:var(--muted); }
+.browse-empty button { margin-top:18px; border:0; border-radius:10px; padding:11px 18px; color:#fff; background:var(--blue); font-weight:700; cursor:pointer; }
+
+@media (max-width:900px) { .marketplace-grid { grid-template-columns:repeat(3,minmax(0,1fr)); } }
+@media (max-width:760px) {
+  .browse-page .browse-container { width:min(100% - 32px,1180px); }
+  .browse-nav { min-height:68px; gap:12px; }
+  .browse-nav-links { display:none; position:absolute; top:68px; right:16px; left:16px; height:auto; flex-direction:column; align-items:stretch; gap:0; border:1px solid var(--border); border-radius:14px; padding:8px; background:#fff; box-shadow:0 14px 30px rgba(0,0,0,.12); }
+  .browse-nav-links.open { display:flex; }
+  .browse-nav-links a { padding:12px; }
+  .browse-nav-links a.active::after { display:none; }
+  .browse-menu-button { display:grid; }
+  .browse-button.ghost { display:none; }
+  .browse-intro { padding-top:38px; }
+  .browse-intro h1 { font-size:36px; }
+  .marketplace-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
+}
+@media (max-width:520px) {
+  .browse-intro h1 { font-size:31px; }
+  .browse-search { height:54px; }
+  .results-toolbar { align-items:flex-start; flex-direction:column; padding:14px 0; }
+  .browse-filters { width:100%; }
+  .browse-filters label { flex:1; }
+  .browse-filters select { width:100%; }
+  .marketplace-grid { grid-template-columns:1fr; }
+  .marketplace-card-body { min-height:125px; }
+}
