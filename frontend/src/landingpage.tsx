@@ -344,7 +344,7 @@ export default function LandingPage() {
               </span>
               <h2>One student's extra is another student's essential.</h2>
             </div>
-            <a className="button button-light" href="/signup">
+            <a className="button button-light" href="/listings/new">
               List an item <Icon name="arrow" size={18} />
             </a>
           </div>
