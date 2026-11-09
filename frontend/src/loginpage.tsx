@@ -2,6 +2,7 @@ import { authLink } from "./authDestination"
 // React state keeps track of the form values and open menus.
 import { useState } from "react"
 import type { ReactNode, SubmitEvent } from "react"
+import { useNavigate } from "react-router"
 import "./loginpage.css"
 import { FirebaseError } from "firebase/app"
 import { logIn, resetPassword } from "./authService"
@@ -149,6 +150,7 @@ export default function LoginPage() {
   const [resetError, setResetError] = useState("")
   const [resetSent, setResetSent] = useState(false)
   const [isResetting, setIsResetting] = useState(false)
+  const navigate = useNavigate()
 
   // Run when the user submits the login form.
   async function submit(event: SubmitEvent<HTMLFormElement>) {
@@ -169,9 +171,6 @@ export default function LoginPage() {
         // check credentials and email verification.
         await logIn(form.email, form.password)
 
-        // Remove any leftover flag from the demo login.
-        window.localStorage.removeItem("campusloop-signed-in")
-
         // Read the requested destination from the URL, or use /browse.
         const next = new URLSearchParams(window.location.search).get("next")
 
@@ -190,7 +189,11 @@ export default function LoginPage() {
           }
         }
 
-        window.location.assign(destination)
+        // Navigate within the SPA instead of window.location.assign, which
+        // reloaded the whole document and made Firebase restore the session
+        // from scratch on the very next page. replace keeps /login out of the
+        // history, so Back does not return to a form the user is done with.
+        navigate(destination, { replace: true })
       } catch (err) {
         // display a readable message when login fails.
         let message = "Could not log in. Please try again."
