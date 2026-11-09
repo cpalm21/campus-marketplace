@@ -1,7 +1,7 @@
 import { useState } from "react"
 import type { ReactNode } from "react"
-import { Link, NavLink } from "react-router"
-import { auth } from "./firebase"
+import { Link, NavLink, useNavigate } from "react-router"
+import { useAuth } from "./authContext"
 
 export type IconName = "arrow" | "back" | "book" | "camera" | "chat" | "check" | "chevron" | "edit" | "filter" | "heart" | "leaf" | "map" | "menu" | "plus" | "search" | "send" | "settings" | "shield" | "spark" | "trash" | "user"
 
@@ -110,10 +110,23 @@ export function Logo() {
 }
 
 function Header() {
-  const currentUser = auth.currentUser
-  const signedIn = Boolean(currentUser?.emailVerified)
+  // Reactive session state. This previously read auth.currentUser directly,
+  // which is a plain value rather than React state: it is null while Firebase
+  // restores the session and never triggers a re-render once it resolves, so
+  // the signed-in header below was effectively unreachable.
+  const { user: currentUser, loading, signedIn, signOut } = useAuth()
+  const navigate = useNavigate()
   const [open, setOpen] = useState(false)
   const close = () => setOpen(false)
+
+  async function handleSignOut() {
+    close()
+    await signOut()
+    // Leave the current page rather than stay on one this user may no longer
+    // be allowed to see. Going home avoids RequireAuth bouncing them to
+    // /login?next=... and making a sign-out look like a sign-in prompt.
+    navigate("/")
+  }
   return (
     <header className="site-header">
       <div className="container nav-wrap">
@@ -150,11 +163,24 @@ function Header() {
               >
                 Account settings
               </NavLink>
+              {/* The desktop sign-out lives in nav-actions below, which the
+                  mobile breakpoint hides. Without this entry there would be
+                  no way to sign out on a phone. */}
+              <button
+                className="mobile-only-link nav-link-button"
+                type="button"
+                onClick={handleSignOut}
+              >
+                Sign out
+              </button>
             </>
           )}
         </nav>
         <div className="nav-actions">
-          {signedIn ? (
+          {/* Three states, not two. Rendering the logged-out buttons while the
+              session is still restoring makes every page load flash "Log in"
+              at a signed-in user. */}
+          {loading ? null : signedIn ? (
             <>
               <Link
                 className="button button-ghost compact-nav"
@@ -167,6 +193,13 @@ function Header() {
                 <span>{currentUser?.displayName?.split(" ")[0] || currentUser?.email?.split("@")[0]}</span>
                 <Icon name="chevron" size={15} />
               </Link>
+              <button
+                className="button button-ghost compact-nav"
+                type="button"
+                onClick={handleSignOut}
+              >
+                Sign out
+              </button>
             </>
           ) : (
             <>

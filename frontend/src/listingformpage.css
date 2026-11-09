@@ -1228,6 +1228,29 @@ footer nav {
   display: none !important;
 }
 
+/* Sign out is an action, so it must be a <button>, but inside the nav it has
+   to read as one of the links beside it. The .nav-links rules above only
+   target <a>, so this repeats their appearance and strips the browser's
+   default button chrome. */
+.nav-links .nav-link-button {
+  position: relative;
+  align-items: center;
+  width: 100%;
+  border: 0;
+  padding: 0;
+  color: #526862;
+  background: none;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 600;
+  text-align: left;
+  cursor: pointer;
+}
+
+.nav-links .nav-link-button:hover {
+  color: #164c3e;
+}
+
 .account-chip img {
   width: 34px;
   height: 34px;
@@ -1540,6 +1563,16 @@ footer nav {
 @media (max-width: 760px) {
   .mobile-only-link {
     display: flex !important;
+  }
+
+  /* Match the padding the sibling links pick up at this breakpoint. */
+  .nav-links .nav-link-button {
+    border-radius: 10px;
+    padding: 12px;
+  }
+
+  .nav-links .nav-link-button:hover {
+    background: #edf5f0;
   }
 
   .container {
