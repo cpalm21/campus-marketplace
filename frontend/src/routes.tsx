@@ -5,8 +5,11 @@ import LoginPage from "./loginpage";
 import Browse from "./Browse";
 import ListingFormPage from "./ListingFormPage";
 import RequireAuth from "./RequireAuth";
+import ListingDetailPage from "./ListingDetailPage";
+import SavedListingsPage from "./SavedListingsPage";
 
 export const router = createBrowserRouter([
+  { path: "/listings/:listingId", Component: ListingDetailPage },
   { path: "/listings/new", element: <RequireAuth><ListingFormPage /></RequireAuth> },
   { path: "/sell", element: <RequireAuth><ListingFormPage /></RequireAuth> },
   {
@@ -24,5 +27,9 @@ export const router = createBrowserRouter([
   {
     path: "/browse",
     Component: Browse
+  },
+  {
+    path: "/saved",
+    Component: SavedListingsPage
   },
 ])

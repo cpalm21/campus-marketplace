@@ -1,30 +1,13 @@
 import { useMemo, useState } from "react"
-import { Link } from "react-router"
 import type { ReactNode } from "react"
+import { ListingCard, MarketplaceLayout } from "./marketplaceComponents"
+import {
+  getSavedListingIds,
+  listings,
+  marketplaceCategories,
+  toggleSavedListing,
+} from "./marketplaceData"
 import "./browse.css"
-
-type Listing = {
-  id: string
-  title: string
-  price: number
-  category: string
-  condition: string
-  location: string
-  image: string
-}
-
-const listings: Listing[] = [
-  { id: "desk-1", title: "Solid wood study desk", price: 45, category: "Furniture", condition: "Good", location: "Morris Library", image: "https://images.unsplash.com/photo-1646470742744-d98a021857e1?auto=format&fit=crop&w=900&q=80" },
-  { id: "biology-books", title: "Intro biology textbook set", price: 28, category: "Textbooks", condition: "Like new", location: "Trabant Student Center", image: "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=900&q=80" },
-  { id: "chair-1", title: "Wood dorm chair", price: 25, category: "Furniture", condition: "Good", location: "Harter Hall", image: "https://images.unsplash.com/photo-1503602642458-232111445657?auto=format&fit=crop&w=900&q=80" },
-  { id: "mini-fridge", title: "Compact dorm mini fridge", price: 65, category: "Dorm supplies", condition: "Like new", location: "Laird Campus", image: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?auto=format&fit=crop&w=900&q=80" },
-  { id: "bike", title: "Blue commuter bicycle", price: 120, category: "Bikes", condition: "Fair", location: "Kirkbride Hall", image: "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=900&q=80" },
-  { id: "calculator", title: "Graphing calculator TI-84", price: 70, category: "Electronics", condition: "Excellent", location: "Smith Hall", image: "https://images.unsplash.com/photo-1593642532400-2682810df593?auto=format&fit=crop&w=900&q=80" },
-  { id: "lamp", title: "Adjustable desk lamp", price: 18, category: "Dorm supplies", condition: "Good", location: "East Campus", image: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=900&q=80" },
-  { id: "novel", title: "Modern fiction paperback set", price: 15, category: "Books", condition: "Good", location: "Morris Library", image: "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=900&q=80" },
-]
-
-const categories = ["All", "Furniture", "Textbooks", "Electronics", "Bikes", "Dorm supplies", "Books"]
 
 function Icon({ name, size = 20 }: { name: "leaf" | "search" | "map" | "heart" | "sliders" | "menu" | "arrow"; size?: number }) {
   const paths: Record<typeof name, ReactNode> = {
@@ -44,8 +27,7 @@ export default function Browse() {
   const [category, setCategory] = useState("All")
   const [condition, setCondition] = useState("All conditions")
   const [sort, setSort] = useState("Newest")
-  const [saved, setSaved] = useState<string[]>([])
-  const [menuOpen, setMenuOpen] = useState(false)
+  const [saved, setSaved] = useState(getSavedListingIds)
 
   const filteredListings = useMemo(() => {
     const query = search.trim().toLowerCase()
@@ -62,21 +44,11 @@ export default function Browse() {
   }, [search, category, condition, sort])
 
   function toggleSaved(id: string) {
-    setSaved((current) => current.includes(id) ? current.filter((item) => item !== id) : [...current, id])
+    setSaved(toggleSavedListing(id))
   }
 
   return (
-    <div className="browse-page">
-      <header className="browse-header">
-        <div className="browse-container browse-nav">
-          <Link className="browse-logo" to="/"><span className="browse-logo-mark"><Icon name="leaf" /></span>CampusLoop</Link>
-          <nav className={menuOpen ? "browse-nav-links open" : "browse-nav-links"}>
-            <Link to="/">Home</Link><Link className="active" to="/browse" onClick={() => setMenuOpen(false)}>Browse</Link><Link to="/saved" onClick={() => setMenuOpen(false)}>Saved</Link>
-          </nav>
-          <div className="browse-nav-actions"><Link className="browse-button ghost" to="/sell">Sell an item</Link><button className="browse-menu-button" type="button" aria-label="Toggle navigation" aria-expanded={menuOpen} onClick={() => setMenuOpen((value) => !value)}><Icon name="menu" /></button></div>
-        </div>
-      </header>
-
+    <MarketplaceLayout active="browse">
       <main>
         <section className="browse-intro">
           <div className="browse-container">
@@ -89,7 +61,7 @@ export default function Browse() {
         <section className="browse-results">
           <div className="browse-container">
             <div className="category-row" aria-label="Listing categories">
-              {categories.map((item) => <button className={category === item ? "category-chip active" : "category-chip"} type="button" key={item} onClick={() => setCategory(item)}>{item}</button>)}
+              {marketplaceCategories.map((item) => <button className={category === item ? "category-chip active" : "category-chip"} type="button" key={item} onClick={() => setCategory(item)}>{item}</button>)}
             </div>
 
             <div className="results-toolbar">
@@ -103,11 +75,12 @@ export default function Browse() {
             {filteredListings.length > 0 ? (
               <div className="marketplace-grid">
                 {filteredListings.map((listing) => (
-                  <article className="marketplace-card" key={listing.id}>
-                    <Link className="marketplace-image" to={`/listings/${listing.id}`}><img src={listing.image} alt="" /><span>{listing.category}</span></Link>
-                    <button className={saved.includes(listing.id) ? "marketplace-favorite active" : "marketplace-favorite"} type="button" aria-label={saved.includes(listing.id) ? `Remove ${listing.title} from saved items` : `Save ${listing.title}`} onClick={() => toggleSaved(listing.id)}><Icon name="heart" size={19} /></button>
-                    <div className="marketplace-card-body"><Link to={`/listings/${listing.id}`}><h2>{listing.title}</h2></Link><strong className="marketplace-price">${listing.price}</strong><p>{listing.condition} condition</p><div><Icon name="map" size={15} /><span>{listing.location}</span></div></div>
-                  </article>
+                  <ListingCard
+                    key={listing.id}
+                    listing={listing}
+                    saved={saved.includes(listing.id)}
+                    onToggleSaved={toggleSaved}
+                  />
                 ))}
               </div>
             ) : (
@@ -116,6 +89,6 @@ export default function Browse() {
           </div>
         </section>
       </main>
-    </div>
+    </MarketplaceLayout>
   )
 }
