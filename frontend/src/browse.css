@@ -69,8 +69,8 @@
   .browse-nav-links.open { display:flex; }
   .browse-nav-links a { padding:12px; }
   .browse-nav-links a.active::after { display:none; }
-  .browse-menu-button { display:grid; }
   .browse-button.ghost { display:none; }
+  .browse-menu-button { display:grid; }
   .browse-intro { padding-top:38px; }
   .browse-intro h1 { font-size:36px; }
   .marketplace-grid { grid-template-columns:repeat(2,minmax(0,1fr)); gap:16px; }
@@ -84,4 +84,36 @@
   .browse-filters select { width:100%; }
   .marketplace-grid { grid-template-columns:1fr; }
   .marketplace-card-body { min-height:125px; }
+}
+
+.saved-listings-main,
+.listing-detail-main { padding-top:44px; padding-bottom:72px; }
+.saved-heading { margin-bottom:28px; }
+.saved-heading h1 { margin:8px 0 10px; font-family:"Manrope",sans-serif; font-size:42px; line-height:1.12; letter-spacing:-.045em; }
+.saved-heading p { max-width:620px; color:var(--muted); line-height:1.6; }
+.saved-empty { margin-top:24px; }
+.saved-empty .marketplace-action-button,
+.listing-not-found .marketplace-action-button { margin-top:12px; }
+.listing-detail-main { max-width:1020px; }
+.listing-back-link { display:inline-flex; align-items:center; gap:8px; margin-bottom:22px; color:var(--blue); font-size:14px; font-weight:700; }
+.listing-detail { display:grid; grid-template-columns:minmax(0,1.1fr) minmax(280px,.9fr); gap:42px; align-items:start; }
+.listing-detail-image { overflow:hidden; border-radius:20px; background:#f0f1f3; }
+.listing-detail-image img { width:100%; aspect-ratio:1.15; object-fit:cover; }
+.listing-detail-info { padding-top:8px; }
+.listing-detail-category { display:inline-flex; border-radius:999px; padding:6px 12px; color:var(--blue); background:#eef5fb; font-size:12px; font-weight:800; }
+.listing-detail-info h1 { margin:16px 0 8px; color:var(--ink); font-size:clamp(30px,4vw,42px); line-height:1.12; }
+.listing-detail-price { margin:0 0 8px; color:var(--blue); font-family:"Manrope",sans-serif; font-size:28px; font-weight:800; }
+.listing-detail-condition { margin:0 0 22px; color:var(--muted); font-size:14px; }
+.listing-detail-description { margin:0 0 22px; color:#444; line-height:1.7; }
+.listing-detail-location { display:flex; align-items:center; gap:9px; margin:0 0 24px; color:#555; font-size:14px; }
+.listing-detail-location svg { flex:none; color:var(--blue); }
+.marketplace-action-button { min-height:46px; display:inline-flex; align-items:center; justify-content:center; border:1px solid var(--blue); border-radius:12px; padding:0 20px; color:var(--blue-dark); background:#fff; font-weight:700; cursor:pointer; }
+.marketplace-action-button.saved { color:#fff; background:var(--blue); }
+.listing-not-found { max-width:650px; margin:40px auto; }
+.listing-not-found h1 { margin:0 0 8px; color:var(--ink); font-size:30px; }
+
+@media (max-width:760px) {
+  .listing-detail { grid-template-columns:1fr; gap:24px; }
+  .listing-detail-image img { aspect-ratio:1.35; }
+  .saved-heading h1 { font-size:36px; }
 }
