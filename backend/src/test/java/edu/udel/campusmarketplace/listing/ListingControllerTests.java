@@ -29,6 +29,8 @@ import org.springframework.web.server.ResponseStatusException;
 
 import edu.udel.campusmarketplace.auth.TokenVerifier;
 import edu.udel.campusmarketplace.auth.VerifiedUser;
+import edu.udel.campusmarketplace.user.User;
+import edu.udel.campusmarketplace.user.UserRepository;
 
 /**
  * Covers the controller and the service rules behind it. The token verifier and
@@ -54,11 +56,17 @@ class ListingControllerTests {
 	@MockitoBean
 	private ListingRepository listingRepository;
 
+	@MockitoBean
+    private UserRepository userRepository;
+
 	@BeforeEach
 	void theCallerIsRegisteredAndTheCategoryExists() {
 		when(tokenVerifier.verify(any()))
 				.thenReturn(new VerifiedUser(FIREBASE_UID, "palmerc@udel.edu", true));
-		when(listingRepository.findUserIdByFirebaseUid(FIREBASE_UID)).thenReturn(Optional.of(USER_ID));
+		UUID universityId = UUID.fromString("11111111-1111-1111-1111-111111111111");
+        when(userRepository.findByFirebaseUid(FIREBASE_UID)).thenReturn(Optional.of(
+                new User(USER_ID, FIREBASE_UID, "palmerc@udel.edu", universityId, Instant.now())));
+        when(userRepository.findUniversityIdByEmailDomain("udel.edu")).thenReturn(Optional.of(universityId));
 		when(listingRepository.categoryExists(CATEGORY_ID)).thenReturn(true);
 		when(listingRepository.insert(any())).thenAnswer(call -> stored(call.getArgument(0)));
 	}
@@ -179,7 +187,7 @@ class ListingControllerTests {
 	 */
 	@Test
 	void createRejectsACallerWithNoProfileRow() throws Exception {
-		when(listingRepository.findUserIdByFirebaseUid(FIREBASE_UID)).thenReturn(Optional.empty());
+		when(userRepository.findByFirebaseUid(FIREBASE_UID)).thenReturn(Optional.empty());
 
 		create(listing("")).andExpect(status().isForbidden());
 
@@ -225,7 +233,7 @@ class ListingControllerTests {
 
 		createWith("title", "null").andExpect(status().isForbidden());
 
-		verify(listingRepository, never()).findUserIdByFirebaseUid(any());
+		verify(userRepository, never()).findByFirebaseUid(any());
 	}
 
 	// --- category -------------------------------------------------------
@@ -342,7 +350,7 @@ class ListingControllerTests {
 	void createValidatesBeforeTouchingTheDatabase() throws Exception {
 		createWith("title", "null").andExpect(status().isBadRequest());
 
-		verify(listingRepository, never()).findUserIdByFirebaseUid(any());
+		verify(userRepository, never()).findByFirebaseUid(any());
 		verify(listingRepository, never()).categoryExists(org.mockito.ArgumentMatchers.anyInt());
 	}
 

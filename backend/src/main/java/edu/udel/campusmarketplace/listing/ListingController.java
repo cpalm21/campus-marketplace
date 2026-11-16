@@ -1,13 +1,20 @@
 package edu.udel.campusmarketplace.listing;
 
 import java.net.URI;
-import java.util.Map;
+import java.math.BigDecimal;
+import java.util.UUID;
 
-import org.springframework.dao.DataAccessException;
+
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
-import org.springframework.web.bind.annotation.ExceptionHandler;
+import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PutMapping;
+import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.DeleteMapping;
+import org.springframework.web.bind.annotation.PathVariable;
+import org.springframework.web.bind.annotation.RequestParam;
+import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestHeader;
@@ -45,8 +52,8 @@ public class ListingController {
 	 * {@link CreateListingRequest} has no userId field to send.
 	 *
 	 * Responds 201 with the stored listing and a Location header pointing at
-	 * it. The GET that header promises does not exist yet, which is the next
-	 * thing this controller needs.
+	 * it. The detail endpoint resolves the returned Location within the caller's
+	 * university.
 	 *
 	 * The header is optional to Spring only so that a missing one fails as 401
 	 * from the verifier rather than as a generic 400, matching
@@ -64,16 +71,51 @@ public class ListingController {
 				.body(listing);
 	}
 
-	/**
-	 * An unreachable database is not the caller's fault, so it is 503 rather
-	 * than 500, matching
-	 * {@link edu.udel.campusmarketplace.reference.ReferenceDataController}.
-	 * The message says nothing about the database itself.
-	 */
-	@ExceptionHandler(DataAccessException.class)
-	ResponseEntity<Map<String, String>> databaseUnavailable() {
-		return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
-				.body(Map.of("message", "Listings are temporarily unavailable."));
-	}
+    @GetMapping
+    public ListingPage browse(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+            @RequestParam(required = false) Integer categoryId,
+            @RequestParam(defaultValue = "Available") String status,
+            @RequestParam(required = false) String condition,
+            @RequestParam(required = false) String q,
+            @RequestParam(required = false) BigDecimal minPrice,
+            @RequestParam(required = false) BigDecimal maxPrice,
+            @RequestParam(defaultValue = "newest") String sort,
+            @RequestParam(defaultValue = "20") int limit,
+            @RequestParam(required = false) String cursor) {
+        var identity = tokenVerifier.verify(authorization);
+        return listingService.browse(identity, new ListingFilters(categoryId, status, condition, q, minPrice, maxPrice, sort),
+                limit, cursor, false);
+    }
 
+    @GetMapping("/{listingId}")
+    public ListingResponse get(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+            @PathVariable UUID listingId) {
+        return listingService.get(tokenVerifier.verify(authorization), listingId);
+    }
+
+    @PutMapping("/{listingId}")
+    public ListingResponse update(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+            @PathVariable UUID listingId, @RequestBody CreateListingRequest request) {
+        return listingService.update(tokenVerifier.verify(authorization), listingId, request);
+    }
+
+    public record StatusRequest(String status) { }
+
+    @PatchMapping("/{listingId}/status")
+    public ListingResponse changeStatus(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+            @PathVariable UUID listingId, @RequestBody StatusRequest request) {
+        return listingService.changeStatus(tokenVerifier.verify(authorization), listingId, request.status());
+    }
+
+    @DeleteMapping("/{listingId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    public void delete(
+            @RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+            @PathVariable UUID listingId) {
+        listingService.delete(tokenVerifier.verify(authorization), listingId);
+    }
 }

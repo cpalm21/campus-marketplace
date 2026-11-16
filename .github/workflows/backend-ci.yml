@@ -7,7 +7,6 @@ on:
       - "supabase/migrations/**"
       - ".github/workflows/backend-ci.yml"
   pull_request:
-    branches: [main]
     paths:
       - "backend/**"
       - "supabase/migrations/**"
@@ -63,3 +62,10 @@ jobs:
       - name: Run backend tests
         working-directory: backend
         run: ./mvnw --batch-mode --no-transfer-progress test
+      - name: Verify direct database clients cannot bypass backend authorization
+        env:
+          POSTGRES_CONTAINER: ${{ job.services.postgres.id }}
+        run: |
+          docker exec -i "$POSTGRES_CONTAINER" psql \
+            --username=postgres --dbname=marketplace_test \
+            --set=ON_ERROR_STOP=1 < backend/src/test/resources/rls-check.sql

@@ -10,9 +10,7 @@ import org.springframework.stereotype.Repository;
 /**
  * Reads and writes users.
  *
- * The SQL here targets the schema after the registration migration lands. It
- * will not run until users.firebase_uid exists and users.password_hash is
- * gone, since that column is NOT NULL and Firebase holds credentials.
+ * Firebase owns credentials; this repository only stores marketplace profiles.
  */
 @Repository
 public class UserRepository {
@@ -52,9 +50,7 @@ public class UserRepository {
 	/**
 	 * Finds the university that owns an email domain.
 	 *
-	 * Lives here rather than in a repository of its own because registration
-	 * is the only thing that reads universities. Move it out once anything
-	 * else needs them.
+	 * Used by registration and by the shared participating-profile access check.
 	 *
 	 * Matching on the domain rather than the display name keeps the mapping in
 	 * data: adding a university is an insert, not a code change, and a name is
@@ -86,6 +82,7 @@ public class UserRepository {
 		String sql = """
 				INSERT INTO users (firebase_uid, email, university_id)
 				VALUES (?, ?, ?)
+				ON CONFLICT (firebase_uid) DO UPDATE SET firebase_uid = EXCLUDED.firebase_uid
 				RETURNING user_id, firebase_uid, email, university_id, created_at
 				""";
 
