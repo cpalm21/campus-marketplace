@@ -2,25 +2,24 @@ package edu.udel.campusmarketplace.listing;
 
 import java.math.BigDecimal;
 import java.util.Set;
+import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
 import org.springframework.web.server.ResponseStatusException;
 
+import edu.udel.campusmarketplace.auth.VerifiedUser;
+
 /**
  * Listing rules.
  *
- * Only the checks that need no database live here so far: every limit below is
- * a column definition in the listings table, so a request that fails one of
- * them could never have been stored. Rejecting it here means a plain 400 that
- * names the field, rather than a Postgres error to decipher.
+ * Takes a {@link VerifiedUser} rather than a Firebase UID string so that an
+ * unverified identity cannot reach this method by mistake, following
+ * {@link edu.udel.campusmarketplace.user.UserService}.
  *
- * The browser checks most of this too, in ListingFormPage. That is for fast
- * feedback only. Anyone can POST to this endpoint directly, so the rule that
- * matters is the one on this side.
- *
- * TODO Resolve userId from the verified Firebase UID, confirm the category
- * exists, and insert. Those need ListingRepository, which does not exist yet.
+ * The browser checks most of the field rules too, in ListingFormPage. That is
+ * for fast feedback only. Anyone can POST to this endpoint directly, so the
+ * rule that matters is the one on this side.
  */
 @Service
 public class ListingService {
@@ -46,7 +45,7 @@ public class ListingService {
 	 *
 	 * Hardcoded rather than read from the database because a CHECK constraint
 	 * is schema, not data: changing this list means a migration either way.
-	 * Categories are the opposite case and are looked up.
+	 * Categories are the opposite case, which is why they are looked up.
 	 *
 	 * Note that the sell form currently offers "Like new", which is not one of
 	 * these and will be rejected. The form's list also omits Great and Poor.
@@ -55,17 +54,78 @@ public class ListingService {
 	private static final Set<String> CONDITIONS = Set.of("New", "Great", "Good", "Fair", "Poor");
 
 	/** What a listing starts as. The column is NOT NULL with no default. */
-	static final String INITIAL_STATUS = "Available";
+	private static final String INITIAL_STATUS = "Available";
+
+	private final ListingRepository listingRepository;
+
+	ListingService(ListingRepository listingRepository) {
+		this.listingRepository = listingRepository;
+	}
+
+	/**
+	 * Stores a listing owned by the caller.
+	 *
+	 * The order of the checks is deliberate. Who the caller is settles first,
+	 * so an unverified student is told that rather than being handed a list of
+	 * complaints about their fields. Field rules come next, since they need no
+	 * database and a malformed request should cost no queries. Then the
+	 * profile lookup, whose id is needed either way, and last the category,
+	 * which is the only check a constraint would otherwise catch.
+	 *
+	 * @return the stored listing, as the frontend is allowed to see it
+	 * @throws ResponseStatusException 400 for a field the table could not
+	 *     hold or a category that does not exist, 403 when the caller's email
+	 *     is unverified or they have no profile row
+	 */
+	public ListingResponse create(VerifiedUser verifiedUser, CreateListingRequest request) {
+		// Selling to other students is the point, so a listing must trace back
+		// to a mailbox someone has proved they own. logIn in authService
+		// blocks an unverified user too, but that check only protects the
+		// browser: this endpoint can be called directly.
+		//
+		// The claim is read from the ID token rather than from Firebase, so it
+		// is as old as the token, up to an hour. Someone who verifies mid
+		// session stays blocked until their token refreshes; signing out and
+		// back in clears it immediately, which is what the message says.
+		// Asking FirebaseAuth for the live value would cost a network call on
+		// every listing created.
+		if (!verifiedUser.emailVerified()) {
+			throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+					"Please verify your UD email before listing an item. "
+							+ "If you just verified it, sign out and sign in again.");
+		}
+
+		validate(request);
+
+		// A Firebase account with no users row. The frontend retries
+		// registration on every sign-in, so this means both that call and the
+		// one at signup failed; signing out and back in runs the retry again.
+		// Not 404: the caller is authenticated, they simply have no profile
+		// here, which is what 403 says.
+		UUID userId = listingRepository.findUserIdByFirebaseUid(verifiedUser.firebaseUid())
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
+						"Your profile is not set up yet. Please sign out and sign in again."));
+
+		if (!listingRepository.categoryExists(request.categoryId())) {
+			throw badRequest("That category does not exist.");
+		}
+
+		return ListingResponse.of(listingRepository.insert(toNewListing(userId, request)));
+	}
 
 	/**
 	 * Rejects a request the listings table could not hold.
+	 *
+	 * Every limit below is a column definition, so a request that fails one of
+	 * them could never have been stored. Rejecting it here means a plain 400
+	 * that names the field, rather than a Postgres error to decipher.
 	 *
 	 * Returns normally when the request is acceptable; the only signal is the
 	 * exception, so a caller cannot accidentally ignore the result.
 	 *
 	 * @throws ResponseStatusException 400, naming the first field that failed
 	 */
-	public void validate(CreateListingRequest request) {
+	private void validate(CreateListingRequest request) {
 		if (request == null) {
 			throw badRequest("A listing body is required.");
 		}
@@ -119,9 +179,35 @@ public class ListingService {
 		}
 	}
 
+	/**
+	 * Builds the row to insert from a request that has already been validated.
+	 *
+	 * Stores trimmed text, so a title padded with spaces cannot sneak past the
+	 * 50-character limit and cannot sort oddly later. A description or
+	 * location that is blank once trimmed becomes null rather than an empty
+	 * string, since the columns are nullable and "absent" should have one
+	 * representation rather than two.
+	 */
+	private static NewListing toNewListing(UUID userId, CreateListingRequest request) {
+		return new NewListing(
+				userId,
+				request.categoryId(),
+				trimmed(request.title()),
+				request.price(),
+				trimmed(request.condition()),
+				nullIfBlank(request.description()),
+				nullIfBlank(request.location()),
+				INITIAL_STATUS);
+	}
+
 	/** A null string counts as absent, which reads the same as an empty one. */
 	private static String trimmed(String value) {
 		return value == null ? "" : value.strip();
+	}
+
+	private static String nullIfBlank(String value) {
+		String trimmed = trimmed(value);
+		return trimmed.isEmpty() ? null : trimmed;
 	}
 
 	private static ResponseStatusException badRequest(String message) {
