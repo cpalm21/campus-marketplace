@@ -27,29 +27,26 @@ type Benefit = {
   text: string
 }
 
-const campusPhoto =
-  "https://images.unsplash.com/photo-1591123120675-6f7f1aae0e5b?crop=entropy&cs=tinysrgb&fit=crop&fm=jpg&q=85&w=1400"
-
 const benefits: Benefit[] = [
   {
     icon: "leaf",
-    title: "Affordable finds",
-    text: "Stretch your student budget further.",
+    title: "Spend a little less",
+    text: "Find textbooks, furniture, and dorm basics for less.",
   },
   {
     icon: "map",
-    title: "Campus focused",
-    text: "Meet at convenient UD pickup spots.",
+    title: "Meet on campus",
+    text: "Arrange a pickup that works for both of you.",
   },
   {
     icon: "spark",
-    title: "Second life",
-    text: "Keep useful items in the community.",
+    title: "Pass things along",
+    text: "Sell what you no longer need to another student.",
   },
   {
     icon: "shield",
-    title: "Safer & simpler",
-    text: "Connect with fellow students.",
+    title: "Just for Blue Hens",
+    text: "Create an account with your UD email.",
   },
 ]
 
@@ -165,6 +162,9 @@ function Header() {
           <a href="/browse" onClick={() => setOpen(false)}>
             Browse
           </a>
+          <a href="/saved" onClick={() => setOpen(false)}>
+            Saved
+          </a>
         </nav>
         <div className="nav-actions">
           <a className="button button-ghost compact-nav" href="/login">
@@ -201,6 +201,7 @@ function ItemCard({ listing }: { listing: FeaturedListing }) {
         className={saved ? "favorite active" : "favorite"}
         type="button"
         aria-label={saved ? "Remove from saved items" : "Save item"}
+        aria-pressed={saved}
         onClick={() => setSaved((value) => !value)}
       >
         <Icon name="heart" size={19} />
@@ -225,7 +226,7 @@ function Footer() {
     <footer>
       <div className="container footer-wrap">
         <Logo />
-        <p>Making University of Delaware living lighter, together.</p>
+        <p>A place for Blue Hens to buy and sell with each other.</p>
         <nav>
           <a href="/browse">Marketplace</a>
           <a href="/signup">Join</a>
@@ -242,63 +243,48 @@ export default function LandingPage() {
       <Header />
       <main>
         <section className="hero">
-          <div className="hero-glow" />
           <div className="container hero-grid">
             <div className="hero-copy">
               <div className="eyebrow">
-                <Icon name="spark" size={17} />
-                University of Delaware's student marketplace
+                A marketplace for UD students
               </div>
               <h1>
-                Pass it on.
+                Buy and sell
                 <br />
-                <span className="accent-blue">Save money.</span>
-                <br />
-                Waste less.
+                <span className="accent-blue">on campus.</span>
               </h1>
               <p className="hero-description">
-                Buy and sell useful things with Blue Hens nearby. One trusted
-                place for textbooks, furniture, tech, bikes, and dorm
-                essentials.
+                Shop textbooks, furniture, bikes, and dorm essentials from
+                other UD students. Have something you don’t need anymore? List
+                it here.
               </p>
               <div className="button-row hero-buttons">
                 <a className="button button-dark button-large" href="/browse">
-                  Browse marketplace <Icon name="arrow" size={18} />
+                  Browse listings <Icon name="arrow" size={18} />
                 </a>
-                <a className="button button-ghost button-large" href="/signup">
-                  Create an account
+                <a className="button button-ghost button-large" href="/listings/new">
+                  Sell an item
                 </a>
               </div>
               <div className="trust-line">
                 <span>
-                  <Icon name="shield" size={17} /> UD community
+                  <Icon name="shield" size={17} /> UD email required
                 </span>
                 <span>
-                  <Icon name="map" size={17} /> Campus pickup
+                  <Icon name="map" size={17} /> Meet on campus
                 </span>
               </div>
             </div>
             <div className="hero-visual">
               <div className="photo-frame">
                 <img
-                  src={campusPhoto}
-                  alt="A university campus with a brick building and green lawn"
+                  src="/ud-campus.jpg"
+                  alt="University of Delaware campus in the fall"
                 />
               </div>
-              <div className="hand-note">
-                Good finds.
-                <br />
-                Better campus.
-                <span>↘</span>
-              </div>
-              <div className="impact-card">
-                <span className="round-icon">
-                  <Icon name="leaf" size={22} />
-                </span>
-                <div>
-                  <strong>1,240 items</strong>
-                  <span>kept in the campus community</span>
-                </div>
+              <div className="hero-photo-caption">
+                <strong>University of Delaware</strong>
+                <span>Newark, Delaware</span>
               </div>
             </div>
           </div>
@@ -324,8 +310,8 @@ export default function LandingPage() {
           <div className="container">
             <div className="section-heading">
               <div>
-                <span className="section-kicker">Fresh on campus</span>
-                <h2>Featured items</h2>
+                <span className="section-kicker">A few examples</span>
+                <h2>Things you can find here</h2>
               </div>
             </div>
             <div className="listing-grid">
@@ -340,9 +326,9 @@ export default function LandingPage() {
           <div className="container cta-card">
             <div>
               <span className="section-kicker">
-                Ready to clear some space?
+                Have something you don’t use anymore?
               </span>
-              <h2>One student's extra is another student's essential.</h2>
+              <h2>List it for another UD student.</h2>
             </div>
             <a className="button button-light" href="/listings/new">
               List an item <Icon name="arrow" size={18} />
