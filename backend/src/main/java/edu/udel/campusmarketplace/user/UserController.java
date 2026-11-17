@@ -31,11 +31,8 @@ public class UserController {
 	 * Spring only so a missing one fails as 401 from the verifier rather than
 	 * as a generic 400.
 	 *
-	 * Responds 200, not 201: the service stores nothing yet, so claiming a
-	 * resource was created would be a lie the frontend could build on.
-	 *
-	 * TODO Return 201 once a row is genuinely inserted, and keep 200 for the
-	 * idempotent repeat call that finds an existing profile.
+	 * Responds 200 for both new and existing profiles, preserving the signup
+	 * client's idempotent registration contract.
 	 */
 	@PostMapping("/register")
 	public UserResponse register(

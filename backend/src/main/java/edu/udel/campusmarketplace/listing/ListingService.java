@@ -1,14 +1,18 @@
 package edu.udel.campusmarketplace.listing;
 
 import java.math.BigDecimal;
+import java.util.List;
 import java.util.Set;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
 import edu.udel.campusmarketplace.auth.VerifiedUser;
+import edu.udel.campusmarketplace.user.CurrentUserService;
+import edu.udel.campusmarketplace.user.User;
 
 /**
  * Listing rules.
@@ -57,9 +61,11 @@ public class ListingService {
 	private static final String INITIAL_STATUS = "Available";
 
 	private final ListingRepository listingRepository;
+    private final CurrentUserService users;
 
-	ListingService(ListingRepository listingRepository) {
+	ListingService(ListingRepository listingRepository, CurrentUserService users) {
 		this.listingRepository = listingRepository;
+        this.users = users;
 	}
 
 	/**
@@ -77,6 +83,7 @@ public class ListingService {
 	 *     hold or a category that does not exist, 403 when the caller's email
 	 *     is unverified or they have no profile row
 	 */
+	@Transactional
 	public ListingResponse create(VerifiedUser verifiedUser, CreateListingRequest request) {
 		// Selling to other students is the point, so a listing must trace back
 		// to a mailbox someone has proved they own. logIn in authService
@@ -102,9 +109,7 @@ public class ListingService {
 		// one at signup failed; signing out and back in runs the retry again.
 		// Not 404: the caller is authenticated, they simply have no profile
 		// here, which is what 403 says.
-		UUID userId = listingRepository.findUserIdByFirebaseUid(verifiedUser.firebaseUid())
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.FORBIDDEN,
-						"Your profile is not set up yet. Please sign out and sign in again."));
+		UUID userId = users.require(verifiedUser, false).userId();
 
 		if (!listingRepository.categoryExists(request.categoryId())) {
 			throw badRequest("That category does not exist.");
@@ -134,7 +139,7 @@ public class ListingService {
 		if (title.isEmpty()) {
 			throw badRequest("A title is required.");
 		}
-		if (title.length() > TITLE_MAX) {
+		if (title.codePointCount(0, title.length()) > TITLE_MAX) {
 			throw badRequest("A title cannot be longer than " + TITLE_MAX + " characters.");
 		}
 
@@ -171,10 +176,10 @@ public class ListingService {
 		// allowed. Only the length is enforced. The form's own 20-character
 		// minimum is deliberately not repeated here: it is advice about
 		// writing a good listing, not something the database cares about.
-		if (trimmed(request.description()).length() > DESCRIPTION_MAX) {
+		if (trimmed(request.description()).codePointCount(0, trimmed(request.description()).length()) > DESCRIPTION_MAX) {
 			throw badRequest("A description cannot be longer than " + DESCRIPTION_MAX + " characters.");
 		}
-		if (trimmed(request.location()).length() > LOCATION_MAX) {
+		if (trimmed(request.location()).codePointCount(0, trimmed(request.location()).length()) > LOCATION_MAX) {
 			throw badRequest("A location cannot be longer than " + LOCATION_MAX + " characters.");
 		}
 	}
@@ -214,4 +219,63 @@ public class ListingService {
 		return new ResponseStatusException(HttpStatus.BAD_REQUEST, message);
 	}
 
+    public ListingPage browse(VerifiedUser identity, ListingFilters filters, int limit, String cursor, boolean mine) {
+        User user = users.require(identity, false);
+        if (limit < 1 || limit > 100) throw badRequest("Limit must be between 1 and 100.");
+        UUID ownerId = mine ? user.userId() : null;
+        String scope = ListingCursor.scope(user.universityId(), ownerId, filters);
+        List<Listing> rows = listingRepository.browse(user.universityId(), ownerId, filters, limit + 1,
+                ListingCursor.parse(cursor, scope));
+        boolean more = rows.size() > limit;
+        List<ListingResponse> items = rows.stream().limit(limit).map(ListingResponse::of).toList();
+        return new ListingPage(items, more ? ListingCursor.encode(rows.get(limit - 1), scope) : null);
+    }
+
+    public ListingResponse get(VerifiedUser identity, UUID listingId) {
+        User user = users.require(identity, false);
+        return ListingResponse.of(find(listingId, user, false));
+    }
+
+    @Transactional
+    public ListingResponse update(VerifiedUser identity, UUID listingId, CreateListingRequest request) {
+        User user = users.require(identity, true);
+        requireAvailable(owned(listingId, user));
+        validate(request);
+        if (!listingRepository.categoryExists(request.categoryId())) throw badRequest("That category does not exist.");
+        return ListingResponse.of(listingRepository.update(listingId, toNewListing(user.userId(), request)));
+    }
+
+    @Transactional
+    public ListingResponse changeStatus(VerifiedUser identity, UUID listingId, String status) {
+        User user = users.require(identity, true);
+        Listing listing = owned(listingId, user);
+        if (status == null || !Set.of("Available", "Reserved", "Sold").contains(status)) throw badRequest("Invalid listing status.");
+        if (listing.status().equals(status)) return ListingResponse.of(listing);
+        if (listing.status().equals("Sold")) throw new ResponseStatusException(HttpStatus.CONFLICT, "Sold listings cannot be reopened.");
+        return ListingResponse.of(listingRepository.changeStatus(listingId, status));
+    }
+
+    @Transactional
+    public void delete(VerifiedUser identity, UUID listingId) {
+        User user = users.require(identity, true);
+        requireAvailable(owned(listingId, user));
+        listingRepository.delete(listingId);
+    }
+
+    private Listing find(UUID listingId, User user, boolean lock) {
+        return listingRepository.find(listingId, user.universityId(), lock).orElseThrow(() ->
+                new ResponseStatusException(HttpStatus.NOT_FOUND, "Listing not found."));
+    }
+
+    private Listing owned(UUID listingId, User user) {
+        Listing listing = find(listingId, user, true);
+        if (!listing.userId().equals(user.userId())) throw new ResponseStatusException(HttpStatus.FORBIDDEN,
+                "Only the seller can change this listing.");
+        return listing;
+    }
+
+    static void requireAvailable(Listing listing) {
+        if (!listing.status().equals("Available")) throw new ResponseStatusException(HttpStatus.CONFLICT,
+                "Only available listings can be edited or deleted.");
+    }
 }

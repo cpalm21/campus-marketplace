@@ -62,11 +62,31 @@ migrations or sample seed data at startup.
 Other commands: `./mvnw test`, `./mvnw package` (jar lands in `backend/target/`).
 
 The **Backend CI** workflow runs Java 21 tests on backend or migration pushes and
-PRs to `main`. It creates a disposable PostgreSQL 17 database and applies all SQL
+PRs, including stacked PRs targeting feature branches. It creates a disposable PostgreSQL 17 database and applies all SQL
 migrations without production secrets or Firebase credentials. Controller and
 authentication tests can run locally without a database. PostgreSQL integration
-tests run when `DATABASE_URL` is set, using a database initialized with the repo's
-migrations and reference data; these tests only read data.
+tests run when `DATABASE_URL` is set, using a **disposable test database** initialized
+with the repo's migrations and reference data. Listing and favorites tests write
+fixtures and roll them back. Concurrent registration, favorites, and listing lock tests commit
+temporary fixtures and remove them afterward. Never point the test suite at a
+hosted production database.
+
+## Marketplace backend
+
+The backend supports authenticated listing creation/detail/search, seller listing
+management, listing-image metadata, and private favorites. Mutations enforce
+verified email, profile eligibility, university scope, seller ownership, and listing
+lifecycle rules. The create contract from PR #20 uses `title` and `categoryId`.
+
+- [Backend API](docs/backend-api.md): complete routes, request/response examples,
+  validation, search/cursors, state transitions, favorites/images, errors, migration
+  rollout, database access model, and test instructions.
+- [Recent merge review](docs/backend-review-2026-11-15.md): reviewed PRs, completed
+  work, and remaining frontend/messaging/transaction tasks.
+
+The frontend still uses sample listings and local saves until it is connected to
+these APIs. Image endpoints store already-hosted HTTPS URLs; file uploads are a
+separate workflow.
 
 ## Database deployment
 
@@ -99,6 +119,9 @@ Review `npx supabase db push --dry-run` before committing changes.
 
 - `20261005172915_create_marketplace_tables.sql` creates the nine marketplace tables.
 - `20261007143500_add_marketplace_reference_data.sql` inserts the universities and listing categories.
+- `20261105192356_add_firebase_auth_fields.sql` adds Firebase profiles and university email domains.
+- `20261116031531_marketplace_listing_workflows.sql` adds soft removal, feed indexes, required timestamps, and RLS.
+- `20261116031544_saved_listing_pagination.sql` supports paginated favorites and requires a save timestamp.
 
 Add a new migration instead of editing one already applied. Keep the timestamp
 prefix of applied migrations unchanged, even when renaming their descriptions.

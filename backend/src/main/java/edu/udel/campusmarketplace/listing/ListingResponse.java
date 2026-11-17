@@ -7,11 +7,8 @@ import java.util.UUID;
 /**
  * Public view of a listing.
  *
- * userId is deliberately absent. The caller of POST /api/listings is the owner
- * by construction, so echoing their internal id back tells them nothing they
- * did not already know and starts leaking a key the frontend has no use for.
- * A future GET that shows somebody else's listing needs a seller name, not a
- * user id, so it wants its own type rather than this one widened.
+ * Internal seller IDs are deliberately absent. The same public contract is
+ * used for create, search, detail, and favorites; ownership stays server-side.
  *
  * categoryId rather than a category name: the frontend already holds the
  * id-to-name pairs from GET /api/categories, so sending the name as well would
@@ -28,7 +25,7 @@ public record ListingResponse(
 		String status,
 		Instant createdAt) {
 
-	static ListingResponse of(Listing listing) {
+	public static ListingResponse of(Listing listing) {
 		return new ListingResponse(
 				listing.listingId(),
 				listing.categoryId(),
