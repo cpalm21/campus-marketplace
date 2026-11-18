@@ -39,6 +39,14 @@ export default function ListingDetailPage() {
                 <p className="listing-detail-location">
                   <Icon name="map" size={17} /> Pickup near {listing.location}
                 </p>
+                <Link
+                  className="marketplace-action-button saved"
+                  style={{ marginRight: 12, marginBottom: 12, gap: 8, color: "#fff" }}
+                  to={`/messages/new/${encodeURIComponent(listing.id)}`}
+                >
+                  <Icon name="chat" size={18} />
+                  Message seller
+                </Link>
                 <button
                   className={
                     savedIds.includes(listing.id)
