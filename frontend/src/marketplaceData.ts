@@ -256,6 +256,32 @@ export async function loadSavedListingIds(signal?: AbortSignal): Promise<Set<str
   return new Set(favorites.map((favorite) => favorite.listing.listingId))
 }
 
+/** What the create endpoint accepts. Mirrors CreateListingRequest. */
+export type NewListing = {
+  title: string
+  price: number
+  categoryId: number
+  condition: string
+  description?: string
+  location?: string
+}
+
+/**
+ * Publishes a listing and returns it, including the id the database assigned.
+ *
+ * Images are not part of this. The API stores links only, capped at 500
+ * characters, and the form's picked photos are local file data that nothing
+ * hosts yet. Publishing without them is a deliberate decision, not an omission.
+ */
+export async function createListing(listing: NewListing): Promise<Listing> {
+  const [names, response] = await Promise.all([
+    categoryNames(),
+    apiFetch<ListingResponse>("/api/listings", { method: "POST", body: listing }),
+  ])
+
+  return toListing(response, names, PLACEHOLDER_IMAGE)
+}
+
 export async function saveListing(listingId: string): Promise<void> {
   await apiFetch<void>("/api/users/me/favorites/" + encodeURIComponent(listingId), {
     method: "PUT",

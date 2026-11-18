@@ -1,21 +1,47 @@
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import type { ChangeEvent, FormEvent } from "react"
-import { Link } from "react-router"
+import { Link, useNavigate } from "react-router"
 import { Field, Icon, PageHeader, ListingLayout } from "./listingComponents"
-import { categories, conditions } from "./listingData"
+import { conditions } from "./listingData"
+import { errorMessage, isSessionExpired } from "./apiClient"
+import { createListing, loadCategories } from "./marketplaceData"
 import "./listingformpage.css"
 
+// The backend's limits, repeated here so the form can say what is wrong before
+// spending a request to be told the same thing.
+const MAX_TITLE = 50
+const MAX_DESCRIPTION = 500
+const MAX_LOCATION = 100
+const MAX_PRICE = 99999999.99
+
 export default function ListingFormPage() {
+  const navigate = useNavigate()
+
   const [form, setForm] = useState({
     title: "",
     price: "",
-    category: "",
+    // The id the backend assigned, not a name. Held as a string because that
+    // is what a <select> value is; converted on submit.
+    categoryId: "",
     condition: "",
     description: "",
     location: "Pickup near Trabant Student Center",
   })
   const [photos, setPhotos] = useState<string[]>([])
   const [errors, setErrors] = useState<Record<string, string>>({})
+
+  const [categories, setCategories] = useState<{ categoryId: number; name: string }[]>([])
+  const [categoryError, setCategoryError] = useState("")
+  const [submitting, setSubmitting] = useState(false)
+  const [submitError, setSubmitError] = useState("")
+
+  useEffect(() => {
+    loadCategories()
+      .then(setCategories)
+      // Without categories there is no valid listing to send, so this one is
+      // worth showing rather than silently degrading.
+      .catch((err) => setCategoryError(errorMessage(err)))
+  }, [])
 
   function upload(event: ChangeEvent<HTMLInputElement>) {
     const files = Array.from(event.target.files || []).slice(
@@ -30,19 +56,72 @@ export default function ListingFormPage() {
     })
   }
 
-  function submit(event: FormEvent) {
+  function validate(): Record<string, string> {
+    const next: Record<string, string> = {}
+    const title = form.title.trim()
+    const price = Number(form.price)
+
+    if (!title) next.title = "Add a clear item title."
+    else if (title.length > MAX_TITLE) next.title = `Use ${MAX_TITLE} characters or fewer.`
+
+    if (!form.price.trim() || !Number.isFinite(price) || price < 0) {
+      next.price = "Enter a valid price."
+    } else if (price > MAX_PRICE) {
+      next.price = "That price is too high."
+    } else if (!/^\d*(\.\d{1,2})?$/.test(form.price.trim())) {
+      // The API rejects more precision than cents, so catch it here instead of
+      // letting a 400 come back after the user waits for the request.
+      next.price = "Use at most two decimal places."
+    }
+
+    if (!form.categoryId) next.category = "Choose a category."
+    if (!form.condition) next.condition = "Choose a condition."
+
+    const description = form.description.trim()
+    if (description.length < 20) next.description = "Add at least 20 characters of detail."
+    else if (description.length > MAX_DESCRIPTION)
+      next.description = `Use ${MAX_DESCRIPTION} characters or fewer.`
+
+    if (form.location.trim().length > MAX_LOCATION)
+      next.location = `Use ${MAX_LOCATION} characters or fewer.`
+
+    return next
+  }
+
+  async function submit(event: FormEvent) {
     event.preventDefault()
-    const nextErrors: Record<string, string> = {}
-    if (!form.title.trim()) nextErrors.title = "Add a clear item title."
-    if (!form.price.trim() || !Number.isFinite(Number(form.price)) || Number(form.price) < 0)
-      nextErrors.price = "Enter a valid price."
-    if (!form.category) nextErrors.category = "Choose a category."
-    if (!form.condition) nextErrors.condition = "Choose a condition."
-    if (form.description.trim().length < 20)
-      nextErrors.description = "Add at least 20 characters of detail."
+
+    const nextErrors = validate()
     setErrors(nextErrors)
     if (Object.keys(nextErrors).length > 0) return
-    // Listing persistence will be added here when the backend is ready.
+
+    setSubmitting(true)
+    setSubmitError("")
+
+    try {
+      const listing = await createListing({
+        title: form.title.trim(),
+        price: Number(form.price),
+        categoryId: Number(form.categoryId),
+        condition: form.condition,
+        // Blank optional fields are left out rather than sent empty, since the
+        // backend stores a blank as null anyway.
+        description: form.description.trim() || undefined,
+        location: form.location.trim() || undefined,
+      })
+
+      // Straight to the published item, so the seller sees the real thing
+      // rather than a success message they have to act on.
+      navigate(`/listings/${listing.id}`)
+    } catch (err) {
+      if (isSessionExpired(err)) {
+        navigate("/login?next=" + encodeURIComponent("/sell"), { replace: true })
+        return
+      }
+
+      setSubmitError(errorMessage(err))
+      setSubmitting(false)
+    }
   }
 
   return (
@@ -63,6 +142,13 @@ export default function ListingFormPage() {
                   <p>Add up to four photos. The first photo is your cover.</p>
                 </div>
               </div>
+              {/* Photos are previewed here but not published yet: the API
+                  stores image links and nothing hosts an uploaded file. Saying
+                  so on the form is better than letting a seller believe their
+                  pictures went up with the listing. */}
+              <p className="photo-notice" role="note">
+                Photo uploads are coming soon. Your listing will publish without them for now.
+              </p>
               <div className="photo-upload-grid">
                 {photos.map((photo, index) => (
                   <div className="upload-preview" key={`${photo}-${index}`}>
@@ -108,6 +194,7 @@ export default function ListingFormPage() {
                 <Field label="Title" error={errors.title}>
                   <input
                     value={form.title}
+                    maxLength={MAX_TITLE}
                     onChange={(event) =>
                       setForm({ ...form, title: event.target.value })
                     }
@@ -121,6 +208,7 @@ export default function ListingFormPage() {
                       <input
                         type="number"
                         min="0"
+                        step="0.01"
                         value={form.price}
                         onChange={(event) =>
                           setForm({ ...form, price: event.target.value })
@@ -129,16 +217,20 @@ export default function ListingFormPage() {
                       />
                     </div>
                   </Field>
-                  <Field label="Category" error={errors.category}>
+                  <Field label="Category" error={errors.category || categoryError}>
                     <select
-                      value={form.category}
+                      value={form.categoryId}
                       onChange={(event) =>
-                        setForm({ ...form, category: event.target.value })
+                        setForm({ ...form, categoryId: event.target.value })
                       }
                     >
-                      <option value="">Choose one</option>
-                      {categories.slice(1).map((category) => (
-                        <option key={category}>{category}</option>
+                      <option value="">
+                        {categories.length ? "Choose one" : "Loading categories..."}
+                      </option>
+                      {categories.map((category) => (
+                        <option key={category.categoryId} value={category.categoryId}>
+                          {category.name}
+                        </option>
                       ))}
                     </select>
                   </Field>
@@ -168,6 +260,7 @@ export default function ListingFormPage() {
                 >
                   <textarea
                     rows={5}
+                    maxLength={MAX_DESCRIPTION}
                     value={form.description}
                     onChange={(event) =>
                       setForm({ ...form, description: event.target.value })
@@ -175,9 +268,10 @@ export default function ListingFormPage() {
                     placeholder="Tell students about your item..."
                   />
                 </Field>
-                <Field label="General pickup location">
+                <Field label="General pickup location" error={errors.location}>
                   <input
                     value={form.location}
+                    maxLength={MAX_LOCATION}
                     onChange={(event) =>
                       setForm({ ...form, location: event.target.value })
                     }
@@ -185,12 +279,15 @@ export default function ListingFormPage() {
                 </Field>
               </div>
             </section>
+            {submitError ? (
+              <p className="form-submit-error" role="alert">{submitError}</p>
+            ) : null}
             <div className="form-actions">
               <Link className="button button-ghost" to="/browse">
                 Cancel
               </Link>
-              <button className="button button-dark" type="submit" disabled title="Publishing is not available yet">
-                Publish listing
+              <button className="button button-dark" type="submit" disabled={submitting}>
+                {submitting ? "Publishing..." : "Publish listing"}
               </button>
             </div>
           </form>
