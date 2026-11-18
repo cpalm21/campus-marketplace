@@ -8,7 +8,7 @@ export function MarketplaceLayout({
   active,
   children,
 }: {
-  active: "browse" | "saved" | null
+  active: "browse" | "saved" | "messages" | null
   children: ReactNode
 }) {
   const [menuOpen, setMenuOpen] = useState(false)
@@ -31,6 +31,13 @@ export function MarketplaceLayout({
             </Link>
             <Link className={active === "saved" ? "active" : undefined} to="/saved" onClick={closeMenu}>
               Saved
+            </Link>
+            <Link
+              className={active === "messages" ? "active" : undefined}
+              to="/messages"
+              onClick={closeMenu}
+            >
+              Messages
             </Link>
           </nav>
           <div className="browse-nav-actions">

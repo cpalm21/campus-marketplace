@@ -7,6 +7,7 @@ import ListingFormPage from "./ListingFormPage";
 import RequireAuth from "./RequireAuth";
 import ListingDetailPage from "./ListingDetailPage";
 import SavedListingsPage from "./SavedListingsPage";
+import MessagesPage from "./MessagesPage";
 
 export const router = createBrowserRouter([
   { path: "/listings/:listingId", Component: ListingDetailPage },
@@ -31,5 +32,17 @@ export const router = createBrowserRouter([
   {
     path: "/saved",
     Component: SavedListingsPage
+  },
+  {
+    path: "/messages",
+    element: <RequireAuth><MessagesPage /></RequireAuth>,
+  },
+  {
+    path: "/messages/:conversationId",
+    element: <RequireAuth><MessagesPage /></RequireAuth>,
+  },
+  {
+    path: "/messages/new/:listingId",
+    element: <RequireAuth><MessagesPage /></RequireAuth>,
   },
 ])
