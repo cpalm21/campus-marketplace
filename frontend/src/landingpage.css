@@ -98,10 +98,9 @@
   width: 36px;
   height: 36px;
   place-items: center;
-  border-radius: 12px 12px 12px 4px;
+  border-radius: 5px;
   color: var(--gold);
   background: var(--blue);
-  box-shadow: 0 7px 16px rgba(0, 83, 159, 0.16);
 }
 
 .campus-loop-landing .nav-links,
@@ -154,7 +153,7 @@
   justify-content: center;
   gap: 8px;
   border: 0;
-  border-radius: 14px;
+  border-radius: 5px;
   padding: 0 21px;
   font-size: 14px;
   font-weight: 700;
@@ -172,12 +171,10 @@
 .campus-loop-landing .button-dark {
   color: #ffffff;
   background: var(--blue);
-  box-shadow: 0 8px 20px rgba(0, 83, 159, 0.16);
 }
 
 .campus-loop-landing .button-dark:hover {
   background: var(--blue-dark);
-  box-shadow: 0 10px 24px rgba(0, 83, 159, 0.2);
 }
 
 .campus-loop-landing .button-ghost {
@@ -220,28 +217,7 @@
   position: relative;
   min-height: 575px;
   padding: 64px 0 72px;
-  background: linear-gradient(118deg, #ffffff 0%, #f5f5f5 100%);
-}
-
-.campus-loop-landing .hero::after {
-  position: absolute;
-  right: -5%;
-  bottom: -120px;
-  width: 340px;
-  height: 340px;
-  border-radius: 50%;
-  background: rgba(0, 83, 159, 0.04);
-  content: "";
-}
-
-.campus-loop-landing .hero-glow {
-  position: absolute;
-  top: -90px;
-  left: -110px;
-  width: 330px;
-  height: 330px;
-  border-radius: 50%;
-  background: rgba(0, 83, 159, 0.04);
+  background: #f7f7f5;
 }
 
 .campus-loop-landing .hero-grid {
@@ -268,14 +244,10 @@
 }
 
 .campus-loop-landing .eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 8px;
+  display: block;
   margin-bottom: 20px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  padding: 8px 12px;
-  background: #ffffff;
+  letter-spacing: 0.02em;
+  text-transform: none;
 }
 
 .campus-loop-landing .hero h1 {
@@ -325,21 +297,14 @@
 
 .campus-loop-landing .hero-visual {
   position: relative;
-  min-height: 435px;
 }
 
 .campus-loop-landing .photo-frame {
-  position: absolute;
-  top: 20px;
-  right: 0;
-  width: 91%;
-  height: 390px;
+  width: 100%;
+  aspect-ratio: 1.15;
   overflow: hidden;
-  border: 9px solid #ffffff;
-  border-radius: 42% 58% 50% 38% / 38% 37% 63% 62%;
+  border-radius: 6px;
   background: var(--gray);
-  box-shadow: 0 25px 55px rgba(17, 17, 17, 0.12);
-  transform: rotate(1.5deg);
 }
 
 .campus-loop-landing .photo-frame img {
@@ -347,72 +312,20 @@
   height: 100%;
   object-fit: cover;
   object-position: center;
-  transform: scale(1.04) rotate(-1.5deg);
+  transform: none;
 }
 
-.campus-loop-landing .hand-note {
-  position: absolute;
-  z-index: 3;
-  top: 17px;
-  left: -28px;
-  color: var(--black);
-  font-family: "Manrope", sans-serif;
-  font-size: 15px;
-  font-weight: 700;
-  line-height: 1.55;
-  transform: rotate(-8deg);
-}
-
-.campus-loop-landing .hand-note span {
-  display: block;
-  color: var(--blue);
-  font-size: 24px;
-}
-
-.campus-loop-landing .impact-card {
-  position: absolute;
-  z-index: 4;
-  right: -15px;
-  bottom: 2px;
+.campus-loop-landing .hero-photo-caption {
   display: flex;
-  align-items: center;
-  gap: 12px;
-  border: 1px solid var(--border);
-  border-radius: 17px;
-  padding: 13px 17px 13px 13px;
-  background: rgba(255, 255, 255, 0.96);
-  box-shadow: 0 16px 34px rgba(17, 17, 17, 0.12);
+  justify-content: space-between;
+  gap: 16px;
+  margin-top: 11px;
+  font-size: 12px;
 }
 
-.campus-loop-landing .round-icon,
-.campus-loop-landing .benefit-icon {
-  display: grid;
-  place-items: center;
-  color: var(--blue);
-  background: var(--gray);
-}
-
-.campus-loop-landing .round-icon {
-  width: 42px;
-  min-width: 42px;
-  height: 42px;
-  border-radius: 13px;
-}
-
-.campus-loop-landing .impact-card strong,
-.campus-loop-landing .impact-card span {
-  display: block;
-}
-
-.campus-loop-landing .impact-card strong {
-  color: var(--black);
-  font-size: 14px;
-}
-
-.campus-loop-landing .impact-card div span {
-  margin-top: 2px;
+.campus-loop-landing .hero-photo-caption span {
   color: var(--muted);
-  font-size: 11px;
+  text-align: right;
 }
 
 .campus-loop-landing .benefits {
@@ -441,11 +354,11 @@
 }
 
 .campus-loop-landing .benefit-icon {
+  display: grid;
   min-width: 44px;
   height: 44px;
-  border-radius: 14px;
-  background: #ffffff;
-  box-shadow: 0 8px 18px rgba(17, 17, 17, 0.06);
+  place-items: center;
+  color: var(--blue);
 }
 
 .campus-loop-landing .benefit h2 {
@@ -509,17 +422,13 @@
   position: relative;
   overflow: hidden;
   border: 1px solid var(--border);
-  border-radius: 20px;
+  border-radius: 6px;
   background: #ffffff;
-  box-shadow: 0 7px 22px rgba(17, 17, 17, 0.06);
-  transition:
-    transform 180ms ease,
-    box-shadow 180ms ease;
+  transition: border-color 180ms ease;
 }
 
 .campus-loop-landing .listing-card:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 15px 30px rgba(17, 17, 17, 0.12);
+  border-color: #b8b8b8;
 }
 
 .campus-loop-landing .listing-image {
@@ -634,22 +543,10 @@
   justify-content: space-between;
   gap: 30px;
   overflow: hidden;
-  border-radius: 30px;
+  border-radius: 6px;
   padding: 40px 46px;
   color: #ffffff;
   background: var(--black);
-  box-shadow: 0 22px 48px rgba(17, 17, 17, 0.18);
-}
-
-.campus-loop-landing .cta-card::after {
-  position: absolute;
-  right: 16%;
-  bottom: -85px;
-  width: 180px;
-  height: 180px;
-  border: 35px solid rgba(255, 255, 255, 0.06);
-  border-radius: 50%;
-  content: "";
 }
 
 .campus-loop-landing .cta-card .section-kicker {
@@ -705,18 +602,6 @@
   .campus-loop-landing .hero-grid {
     grid-template-columns: minmax(0, 1fr) minmax(350px, 0.8fr);
     gap: 38px;
-  }
-
-  .campus-loop-landing .hero-visual {
-    min-height: 390px;
-  }
-
-  .campus-loop-landing .photo-frame {
-    height: 350px;
-  }
-
-  .campus-loop-landing .hand-note {
-    left: -10px;
   }
 
   .campus-loop-landing .benefit-grid,
@@ -793,25 +678,8 @@
     font-size: 15px;
   }
 
-  .campus-loop-landing .hero-visual {
-    min-height: 365px;
-  }
-
   .campus-loop-landing .photo-frame {
-    top: 0;
-    left: 4%;
-    width: 92%;
-    height: 345px;
-  }
-
-  .campus-loop-landing .hand-note {
-    top: -20px;
-    left: 0;
-  }
-
-  .campus-loop-landing .impact-card {
-    right: 0;
-    bottom: 0;
+    aspect-ratio: 1.2;
   }
 
   .campus-loop-landing .benefit-grid,
@@ -845,18 +713,6 @@
 }
 
 @media (max-width: 460px) {
-  .campus-loop-landing .hero-visual {
-    min-height: 330px;
-  }
-
-  .campus-loop-landing .photo-frame {
-    height: 305px;
-  }
-
-  .campus-loop-landing .hand-note {
-    display: none;
-  }
-
   .campus-loop-landing .section-heading {
     align-items: flex-start;
   }
