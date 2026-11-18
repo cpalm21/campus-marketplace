@@ -1,19 +1,64 @@
-import { useState } from "react"
-import { Link } from "react-router"
+import { useEffect, useState } from "react"
+import { Link, useNavigate } from "react-router"
 import { ListingCard, MarketplaceLayout } from "./marketplaceComponents"
-import {
-  getSavedListingIds,
-  listings,
-  toggleSavedListing,
-} from "./marketplaceData"
+import { errorMessage, isAbortError, isSessionExpired } from "./apiClient"
+import { loadSavedListings, removeSavedListing } from "./marketplaceData"
+import type { Listing } from "./marketplaceData"
 import "./browse.css"
 
 export default function SavedListingsPage() {
-  const [savedIds, setSavedIds] = useState(getSavedListingIds)
-  const savedListings = listings.filter((listing) => savedIds.includes(listing.id))
+  const navigate = useNavigate()
+  const [savedListings, setSavedListings] = useState<Listing[]>([])
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
 
-  function toggleSaved(id: string) {
-    setSavedIds(toggleSavedListing(id))
+  useEffect(() => {
+    const controller = new AbortController()
+
+    loadSavedListings(controller.signal)
+      .then(setSavedListings)
+      .catch((err) => {
+        if (isAbortError(err)) {
+          return
+        }
+
+        if (isSessionExpired(err)) {
+          navigate("/login?next=" + encodeURIComponent("/saved"), { replace: true })
+          return
+        }
+
+        setError(errorMessage(err))
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false)
+        }
+      })
+
+    return () => controller.abort()
+  }, [navigate])
+
+  async function toggleSaved(id: string) {
+    const removed = savedListings.find((listing) => listing.id === id)
+
+    if (!removed) {
+      return
+    }
+
+    // Every card on this page is saved, so the only action is removal. Drop it
+    // from the list straight away and restore it if the backend refuses.
+    setSavedListings((current) => current.filter((listing) => listing.id !== id))
+    setError("")
+
+    try {
+      await removeSavedListing(id)
+    } catch (err) {
+      setSavedListings((current) => [removed, ...current])
+
+      if (!isAbortError(err)) {
+        setError(errorMessage(err))
+      }
+    }
   }
 
   return (
@@ -24,7 +69,12 @@ export default function SavedListingsPage() {
           <h1>Saved items</h1>
           <p>Keep track of the campus finds you want to come back to.</p>
         </div>
-        {savedListings.length ? (
+        {error ? <p role="alert" className="browse-error">{error}</p> : null}
+        {loading ? (
+          <div className="browse-empty saved-empty">
+            <h2>Loading your saved items</h2>
+          </div>
+        ) : savedListings.length ? (
           <div className="marketplace-grid">
             {savedListings.map((listing) => (
               <ListingCard

@@ -10,7 +10,10 @@ import SavedListingsPage from "./SavedListingsPage";
 import MessagesPage from "./MessagesPage";
 
 export const router = createBrowserRouter([
-  { path: "/listings/:listingId", Component: ListingDetailPage },
+  // Every listing, image, and favorites endpoint requires a Firebase token,
+  // so these pages cannot render for a signed-out visitor any more. They were
+  // public while they ran on sample data.
+  { path: "/listings/:listingId", element: <RequireAuth><ListingDetailPage /></RequireAuth> },
   { path: "/listings/new", element: <RequireAuth><ListingFormPage /></RequireAuth> },
   { path: "/sell", element: <RequireAuth><ListingFormPage /></RequireAuth> },
   {
@@ -27,11 +30,11 @@ export const router = createBrowserRouter([
   },
   {
     path: "/browse",
-    Component: Browse
+    element: <RequireAuth><Browse /></RequireAuth>,
   },
   {
     path: "/saved",
-    Component: SavedListingsPage
+    element: <RequireAuth><SavedListingsPage /></RequireAuth>,
   },
   {
     path: "/messages",

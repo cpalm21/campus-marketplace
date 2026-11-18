@@ -1,4 +1,4 @@
-import { listings } from "./marketplaceData"
+import { loadListing } from "./marketplaceData"
 
 export type ChatMessage = {
   id: string
@@ -27,14 +27,16 @@ export interface MessagingService {
 // Keep this behind the service so the page can use an API adapter later.
 const inboxes = new Map<string, Conversation[]>()
 
-function makeConversation(listingId: string): Conversation {
-  const listing = listings.find((item) => item.id === listingId)
-  if (!listing) throw new Error("This listing is no longer available.")
-
-  const names: Record<string, string> = {
-    "desk-1": "Jordan Lee",
-    "biology-books": "Maya Patel",
-  }
+// Reads the real listing this conversation is about. The seeded sample
+// conversations that used to live here pointed at the hardcoded listing ids
+// ("desk-1" and friends) that the marketplace no longer has, so the inbox now
+// starts empty and fills from the Message seller button on a real listing.
+//
+// The backend deliberately leaves seller identity out of a listing response,
+// so there is no name to show yet. Naming the other person needs either a
+// messaging API or a seller display name on the listing.
+async function makeConversation(listingId: string): Promise<Conversation> {
+  const { listing } = await loadListing(listingId)
 
   return {
     id: crypto.randomUUID(),
@@ -42,32 +44,15 @@ function makeConversation(listingId: string): Conversation {
     listingTitle: listing.title,
     listingImage: listing.image,
     listingPrice: listing.price,
-    participantName: names[listing.id] ?? "Demo seller",
+    participantName: "Seller",
     messages: [],
   }
-}
-
-function createDemoInbox(): Conversation[] {
-  return ["desk-1", "biology-books"]
-    .filter((id) => listings.some((listing) => listing.id === id))
-    .map((id) => {
-      const chat = makeConversation(id)
-      chat.messages = [{
-        id: crypto.randomUUID(),
-        text: id === "desk-1"
-          ? "Sample message: the desk is still available."
-          : "Sample message: the lab manual is included.",
-        sentAt: new Date(Date.now() - 120_000).toISOString(),
-        isMine: false,
-      }]
-      return chat
-    })
 }
 
 export function createMessagingService(firebaseUid: string): MessagingService {
   // Each signed-in account gets its own demo inbox in this browser tab.
   // Refreshing the page resets the demo. No localStorage or database writes.
-  if (!inboxes.has(firebaseUid)) inboxes.set(firebaseUid, createDemoInbox())
+  if (!inboxes.has(firebaseUid)) inboxes.set(firebaseUid, [])
   const read = () => inboxes.get(firebaseUid)!
 
   return {
@@ -78,7 +63,7 @@ export function createMessagingService(firebaseUid: string): MessagingService {
     async openConversation(listingId) {
       const existing = read().find((chat) => chat.listingId === listingId)
       if (existing) return structuredClone(existing)
-      const chat = makeConversation(listingId)
+      const chat = await makeConversation(listingId)
       inboxes.set(firebaseUid, [chat, ...read()])
       return structuredClone(chat)
     },

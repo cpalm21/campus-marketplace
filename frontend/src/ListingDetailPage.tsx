@@ -1,27 +1,109 @@
-import { useState } from "react"
-import { Link, useParams } from "react-router"
+import { useEffect, useState } from "react"
+import { Link, useNavigate, useParams } from "react-router"
 import { Icon } from "./listingComponents"
 import { MarketplaceLayout } from "./marketplaceComponents"
+import { errorMessage, isAbortError, isSessionExpired } from "./apiClient"
 import {
-  getSavedListingIds,
-  listings,
-  toggleSavedListing,
+  loadListing,
+  loadSavedListingIds,
+  removeSavedListing,
+  saveListing,
 } from "./marketplaceData"
+import type { Listing } from "./marketplaceData"
 import "./browse.css"
 
 export default function ListingDetailPage() {
   const { listingId } = useParams()
-  const listing = listings.find((item) => item.id === listingId)
-  const [savedIds, setSavedIds] = useState(getSavedListingIds)
+  const navigate = useNavigate()
 
-  function toggleSaved(id: string) {
-    setSavedIds(toggleSavedListing(id))
+  const [listing, setListing] = useState<Listing | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [error, setError] = useState("")
+  const [saved, setSaved] = useState(false)
+  const [saveError, setSaveError] = useState("")
+
+  useEffect(() => {
+    if (!listingId) {
+      setLoading(false)
+      return
+    }
+
+    const controller = new AbortController()
+
+    loadListing(listingId, controller.signal)
+      .then((result) => setListing(result.listing))
+      .catch((err) => {
+        if (isAbortError(err)) {
+          return
+        }
+
+        if (isSessionExpired(err)) {
+          navigate("/login?next=" + encodeURIComponent("/listings/" + listingId), { replace: true })
+          return
+        }
+
+        setError(errorMessage(err))
+      })
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false)
+        }
+      })
+
+    return () => controller.abort()
+  }, [listingId, navigate])
+
+  useEffect(() => {
+    if (!listingId) {
+      return
+    }
+
+    const controller = new AbortController()
+
+    loadSavedListingIds(controller.signal)
+      .then((ids) => setSaved(ids.has(listingId)))
+      // The save button still works if this fails; it just starts unfilled.
+      .catch(() => undefined)
+
+    return () => controller.abort()
+  }, [listingId])
+
+  async function toggleSaved() {
+    if (!listingId) {
+      return
+    }
+
+    const wasSaved = saved
+
+    setSaved(!wasSaved)
+    setSaveError("")
+
+    try {
+      if (wasSaved) {
+        await removeSavedListing(listingId)
+      } else {
+        await saveListing(listingId)
+      }
+    } catch (err) {
+      // The backend refuses some saves deliberately: your own listing is 403
+      // and a sold item is 409. Show its reason instead of a button that
+      // quietly snaps back.
+      setSaved(wasSaved)
+
+      if (!isAbortError(err)) {
+        setSaveError(errorMessage(err))
+      }
+    }
   }
 
   return (
     <MarketplaceLayout active={null}>
       <main className="browse-container listing-detail-main">
-        {listing ? (
+        {loading ? (
+          <div className="browse-empty listing-not-found">
+            <h1>Loading this item</h1>
+          </div>
+        ) : listing ? (
           <>
             <Link className="listing-back-link" to="/browse">
               <span aria-hidden="true">&larr;</span> Back to browse
@@ -35,10 +117,16 @@ export default function ListingDetailPage() {
                 <h1>{listing.title}</h1>
                 <p className="listing-detail-price">${listing.price}</p>
                 <p className="listing-detail-condition">{listing.condition} condition</p>
+                {/* A reserved or sold item still has a page, and a buyer should
+                    be told before they message the seller about it. */}
+                {listing.status === "Available" ? null : (
+                  <p className="listing-detail-status">This item is {listing.status.toLowerCase()}.</p>
+                )}
                 <p className="listing-detail-description">{listing.description}</p>
                 <p className="listing-detail-location">
                   <Icon name="map" size={17} /> Pickup near {listing.location}
                 </p>
+                {saveError ? <p role="alert" className="browse-error">{saveError}</p> : null}
                 <Link
                   className="marketplace-action-button saved"
                   style={{ marginRight: 12, marginBottom: 12, gap: 8, color: "#fff" }}
@@ -48,16 +136,12 @@ export default function ListingDetailPage() {
                   Message seller
                 </Link>
                 <button
-                  className={
-                    savedIds.includes(listing.id)
-                      ? "marketplace-action-button saved"
-                      : "marketplace-action-button"
-                  }
+                  className={saved ? "marketplace-action-button saved" : "marketplace-action-button"}
                   type="button"
-                  aria-pressed={savedIds.includes(listing.id)}
-                  onClick={() => toggleSaved(listing.id)}
+                  aria-pressed={saved}
+                  onClick={toggleSaved}
                 >
-                  {savedIds.includes(listing.id) ? "Remove from saved" : "Save item"}
+                  {saved ? "Remove from saved" : "Save item"}
                 </button>
               </div>
             </article>
@@ -65,7 +149,7 @@ export default function ListingDetailPage() {
         ) : (
           <div className="browse-empty listing-not-found">
             <h1>We couldn’t find that item.</h1>
-            <p>It may have been removed or the link may be incorrect.</p>
+            <p>{error || "It may have been removed or the link may be incorrect."}</p>
             <Link className="browse-button marketplace-action-button saved" to="/browse">
               Browse listings
             </Link>
