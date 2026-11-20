@@ -1,9 +1,11 @@
 package edu.udel.campusmarketplace.message;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
+import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
@@ -66,6 +68,27 @@ public class MessageController {
 			@RequestBody SendMessageRequest request) {
 
 		return messageService.send(tokenVerifier.verify(authorization), listingId, request);
+	}
+
+	/**
+	 * Reads the caller's conversation about a listing, oldest message first.
+	 *
+	 * Lives on the same path as the POST because it answers the question that
+	 * POST creates: having messaged a seller, a student needs to see the
+	 * exchange. A listing id is enough to name it, since a buyer has at most
+	 * one conversation per item.
+	 *
+	 * Returns a bare array rather than a paged object. Nothing is truncated
+	 * that a caller could page past yet, so a nextCursor field would be a
+	 * promise this endpoint cannot keep; the wrapper arrives with the cursor
+	 * that justifies it.
+	 */
+	@GetMapping
+	public List<MessageResponse> thread(
+			@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
+			@PathVariable UUID listingId) {
+
+		return messageService.thread(tokenVerifier.verify(authorization), listingId);
 	}
 
 }

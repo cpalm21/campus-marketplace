@@ -1,5 +1,6 @@
 package edu.udel.campusmarketplace.message;
 
+import java.util.List;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
@@ -40,6 +41,18 @@ public class MessageService {
 	 * Because it is policy rather than schema, changing it needs no migration.
 	 */
 	private static final int TEXT_MAX = 2000;
+
+	/**
+	 * The most messages one read of a conversation returns.
+	 *
+	 * A stop-gap, not a rule: without cursors an unbounded thread read would
+	 * grow with the conversation, so this keeps one response bounded. The
+	 * newest messages are the ones kept, since that is the end of a chat
+	 * anyone is looking at. Replacing this with keyset pagination, the way
+	 * {@link edu.udel.campusmarketplace.listing.ListingCursor} does for
+	 * listings, is the next piece of messaging work.
+	 */
+	private static final int THREAD_MAX = 200;
 
 	private final MessageRepository messageRepository;
 	private final ListingRepository listingRepository;
@@ -85,12 +98,7 @@ public class MessageService {
 
 		validate(request);
 
-		// Scoped to the sender's university, so a listing at another school is
-		// 404 and not 403: a student should not be able to confirm that an
-		// id exists somewhere they cannot see. Soft-deleted listings are
-		// excluded by find itself.
-		Listing listing = listingRepository.find(listingId, sender.universityId(), false)
-				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Listing not found."));
+		Listing listing = visibleListing(listingId, sender);
 
 		// messages has CHECK (sender_id <> receiver_id), so this would fail as
 		// a 409 from the constraint. Checking it here makes it a 403 that says
@@ -115,6 +123,68 @@ public class MessageService {
 				listing.listingId(), sender.userId(), listing.userId(), trimmed(request.text()));
 
 		return MessageResponse.of(messageRepository.insert(newMessage), sender.userId());
+	}
+
+	/**
+	 * Reads the caller's conversation about a listing, oldest message first.
+	 *
+	 * Reading is not changing marketplace data, so this asks only for a
+	 * registered profile at a participating university and not for a verified
+	 * email, matching
+	 * {@link edu.udel.campusmarketplace.listing.ListingService#get}.
+	 *
+	 * The conversation is the caller's own. There is no way to ask for anyone
+	 * else's, because the only ids the query is built from are the caller's
+	 * and the listing's seller: privacy here is a property of the lookup
+	 * rather than a check bolted onto it.
+	 *
+	 * This is the buyer's side only, for the same reason
+	 * {@link #send} is. A seller has one conversation per interested student,
+	 * so "the conversation about this listing" is not a single thing for them.
+	 * They get a 409 saying so rather than a merged thread, which would read
+	 * as a group chat and leak one buyer's messages to another.
+	 *
+	 * An empty list is a real answer, not a 404: the listing is visible and
+	 * the caller simply has not said anything yet. There is nothing to create,
+	 * since a conversation exists only as the messages in it.
+	 *
+	 * @return at most {@value #THREAD_MAX} messages, as the caller sees them
+	 * @throws ResponseStatusException 403 when the caller is not an eligible
+	 *     student, 404 when the listing is not visible to them, 409 when they
+	 *     are the seller
+	 */
+	public List<MessageResponse> thread(VerifiedUser identity, UUID listingId) {
+		User caller = users.require(identity, false);
+		Listing listing = visibleListing(listingId, caller);
+
+		if (listing.userId().equals(caller.userId())) {
+			throw new ResponseStatusException(HttpStatus.CONFLICT,
+					"You are the seller of this listing, so it has one conversation per interested "
+							+ "student. Open one from your inbox instead.");
+		}
+
+		return messageRepository.findThread(listingId, caller.userId(), listing.userId(), THREAD_MAX)
+				.stream()
+				.map(message -> MessageResponse.of(message, caller.userId()))
+				.toList();
+	}
+
+	/**
+	 * Finds a listing the caller is allowed to see, or fails.
+	 *
+	 * Scoped to the caller's university, so a listing at another school is 404
+	 * and not 403: a student should not be able to confirm that an id exists
+	 * somewhere they cannot see. Soft-deleted listings are excluded by find
+	 * itself, so a removed item reads as gone.
+	 *
+	 * No row lock is taken. Sending a message neither depends on nor changes
+	 * the listing, so there is nothing for a competing request to spoil; this
+	 * is unlike ListingService.owned, which locks because it is about to
+	 * mutate the row it just read.
+	 */
+	private Listing visibleListing(UUID listingId, User caller) {
+		return listingRepository.find(listingId, caller.universityId(), false)
+				.orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "Listing not found."));
 	}
 
 	/**

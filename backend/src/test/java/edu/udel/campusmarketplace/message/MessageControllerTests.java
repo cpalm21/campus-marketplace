@@ -2,10 +2,12 @@ package edu.udel.campusmarketplace.message;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.ArgumentMatchers.anyInt;
 import static org.mockito.ArgumentMatchers.eq;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -14,6 +16,7 @@ import java.math.BigDecimal;
 import java.time.Instant;
 import java.util.Collections;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
@@ -308,6 +311,90 @@ class MessageControllerTests {
 				.content(text("Hello")))
 				.andExpect(status().isBadRequest())
 				.andExpect(jsonPath("$.message").value("Invalid request body or parameter."));
+	}
+
+	@Test
+	void readsAnEmptyThreadAsAnEmptyList() throws Exception {
+		read().andExpect(status().isOk()).andExpect(jsonPath("$").isArray())
+				.andExpect(jsonPath("$.length()").value(0));
+	}
+
+	/**
+	 * isMine is computed per viewer, so the same two stored rows come back
+	 * with opposite flags depending on who is reading.
+	 */
+	@Test
+	void readsAThreadOldestFirstWithEachSideLabelled() throws Exception {
+		when(messageRepository.findThread(LISTING_ID, SENDER_ID, SELLER_ID, 200)).thenReturn(List.of(
+				new Message(UUID.randomUUID(), LISTING_ID, SENDER_ID, SELLER_ID,
+						"Is the desk still available?", Instant.now().minusSeconds(120), true),
+				new Message(UUID.randomUUID(), LISTING_ID, SELLER_ID, SENDER_ID,
+						"Yes, it is.", Instant.now(), false)));
+
+		read().andExpect(status().isOk())
+				.andExpect(jsonPath("$.length()").value(2))
+				.andExpect(jsonPath("$[0].text").value("Is the desk still available?"))
+				.andExpect(jsonPath("$[0].isMine").value(true))
+				.andExpect(jsonPath("$[1].text").value("Yes, it is."))
+				.andExpect(jsonPath("$[1].isMine").value(false));
+	}
+
+	/** The cap is applied by the service, not left to the caller. */
+	@Test
+	void readsAtMostTwoHundredMessages() throws Exception {
+		read().andExpect(status().isOk());
+		verify(messageRepository).findThread(LISTING_ID, SENDER_ID, SELLER_ID, 200);
+	}
+
+	/**
+	 * A seller has one conversation per interested student, so a listing id
+	 * does not name a single thread for them. Merging them would leak one
+	 * buyer's messages to another.
+	 */
+	@Test
+	void refusesToReadAThreadAsTheSeller() throws Exception {
+		when(userRepository.findByFirebaseUid(FIREBASE_UID)).thenReturn(Optional.of(
+				new User(SELLER_ID, FIREBASE_UID, EMAIL, UNIVERSITY_ID, Instant.now())));
+
+		read().andExpect(status().isConflict());
+		verify(messageRepository, never()).findThread(any(), any(), any(), anyInt());
+	}
+
+	@Test
+	void refusesToReadAThreadAboutAListingTheCallerCannotSee() throws Exception {
+		when(listingRepository.find(LISTING_ID, UNIVERSITY_ID, false)).thenReturn(Optional.empty());
+
+		read().andExpect(status().isNotFound())
+				.andExpect(jsonPath("$.message").value("Listing not found."));
+	}
+
+	/** Reading is not a write, so an unverified email is allowed, as for GET /api/listings. */
+	@Test
+	void readsAThreadWithAnUnverifiedEmail() throws Exception {
+		when(tokenVerifier.verify(any())).thenReturn(new VerifiedUser(FIREBASE_UID, EMAIL, false));
+
+		read().andExpect(status().isOk());
+	}
+
+	@Test
+	void refusesToReadAThreadWithNoMarketplaceProfile() throws Exception {
+		when(userRepository.findByFirebaseUid(FIREBASE_UID)).thenReturn(Optional.empty());
+
+		read().andExpect(status().isForbidden())
+				.andExpect(jsonPath("$.message").value("Register a marketplace profile first."));
+	}
+
+	@Test
+	void refusesToReadAThreadWhenUnauthenticated() throws Exception {
+		when(tokenVerifier.verify(any())).thenThrow(new ResponseStatusException(
+				HttpStatus.UNAUTHORIZED, "Expected an Authorization: Bearer <Firebase ID token> header."));
+
+		read().andExpect(status().isUnauthorized());
+	}
+
+	private ResultActions read() throws Exception {
+		return mockMvc.perform(get("/api/listings/{listingId}/messages", LISTING_ID)
+				.header(HttpHeaders.AUTHORIZATION, "Bearer token"));
 	}
 
 	private ResultActions send(String body) throws Exception {
