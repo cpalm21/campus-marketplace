@@ -1,131 +1,295 @@
+import { apiFetch } from "./apiClient"
+
+// Reads the marketplace from the backend. This module used to export a
+// hardcoded array of sample listings; every page that imported it was showing
+// invented data. The shapes below mirror docs/backend-api.md.
+
+/** A listing as the marketplace pages display it. */
 export type Listing = {
   id: string
   title: string
   price: number
+  /** Resolved from categoryId, because the backend sends only the id. */
   category: string
   condition: string
   location: string
   image: string
   description: string
+  status: ListingStatus
+  createdAt: string
 }
 
-export const listings: Listing[] = [
-  {
-    id: "desk-1",
-    title: "Solid wood study desk",
-    price: 45,
-    category: "Furniture",
-    condition: "Good",
-    location: "Morris Library",
-    image: "https://images.unsplash.com/photo-1646470742744-d98a021857e1?auto=format&fit=crop&w=900&q=80",
-    description:
-      "A sturdy solid wood desk with a spacious top for studying. Shows some light wear from normal use.",
-  },
-  {
-    id: "biology-books",
-    title: "Intro biology textbook set",
-    price: 28,
-    category: "Textbooks",
-    condition: "Like new",
-    location: "Trabant Student Center",
-    image: "https://images.unsplash.com/photo-1512820790803-83ca734da794?auto=format&fit=crop&w=900&q=80",
-    description:
-      "A set of introductory biology textbooks in like-new condition. Great for keeping course reading together.",
-  },
-  {
-    id: "chair-1",
-    title: "Wood dorm chair",
-    price: 25,
-    category: "Furniture",
-    condition: "Good",
-    location: "Harter Hall",
-    image: "https://images.unsplash.com/photo-1503602642458-232111445657?auto=format&fit=crop&w=900&q=80",
-    description:
-      "A comfortable wooden chair that works well at a desk or as extra seating. Normal signs of use.",
-  },
-  {
-    id: "mini-fridge",
-    title: "Compact dorm mini fridge",
-    price: 65,
-    category: "Dorm supplies",
-    condition: "Like new",
-    location: "Laird Campus",
-    image: "https://images.unsplash.com/photo-1571175443880-49e1d25b2bc5?auto=format&fit=crop&w=900&q=80",
-    description:
-      "A compact mini fridge in like-new condition, sized for a dorm room or office.",
-  },
-  {
-    id: "bike",
-    title: "Blue commuter bicycle",
-    price: 120,
-    category: "Bikes",
-    condition: "Fair",
-    location: "Kirkbride Hall",
-    image: "https://images.unsplash.com/photo-1485965120184-e220f721d03e?auto=format&fit=crop&w=900&q=80",
-    description:
-      "A blue commuter bike that is ready for campus trips. It has some cosmetic wear from regular use.",
-  },
-  {
-    id: "calculator",
-    title: "Graphing calculator TI-84",
-    price: 70,
-    category: "Electronics",
-    condition: "Excellent",
-    location: "Smith Hall",
-    image: "https://images.unsplash.com/photo-1593642532400-2682810df593?auto=format&fit=crop&w=900&q=80",
-    description:
-      "A graphing calculator in excellent condition. A practical option for math and science courses.",
-  },
-  {
-    id: "lamp",
-    title: "Adjustable desk lamp",
-    price: 18,
-    category: "Dorm supplies",
-    condition: "Good",
-    location: "East Campus",
-    image: "https://images.unsplash.com/photo-1507473885765-e6ed057f782c?auto=format&fit=crop&w=900&q=80",
-    description:
-      "An adjustable lamp for a dorm desk or bedside table. Works well and has light signs of use.",
-  },
-  {
-    id: "novel",
-    title: "Modern fiction paperback set",
-    price: 15,
-    category: "Books",
-    condition: "Good",
-    location: "Morris Library",
-    image: "https://images.unsplash.com/photo-1495446815901-a7297e633e8d?auto=format&fit=crop&w=900&q=80",
-    description:
-      "A small set of modern fiction paperbacks in good, readable condition.",
-  },
-]
+export type ListingStatus = "Available" | "Reserved" | "Sold"
 
-export const marketplaceCategories = [
-  "All",
-  "Furniture",
-  "Textbooks",
-  "Electronics",
-  "Bikes",
-  "Dorm supplies",
-  "Books",
-]
-
-const SAVED_LISTINGS_KEY = "campus-marketplace:saved-listings"
-const listingIds = new Set(listings.map((listing) => listing.id))
-
-export function getSavedListingIds(): string[] {
-  const saved = window.localStorage.getItem(SAVED_LISTINGS_KEY)
-  if (!saved) return []
-
-  return saved.split(",").filter((id) => listingIds.has(id))
+/** The backend's listing response. */
+type ListingResponse = {
+  listingId: string
+  categoryId: number
+  title: string
+  price: number
+  condition: string
+  description: string | null
+  location: string | null
+  status: ListingStatus
+  createdAt: string
 }
 
-export function toggleSavedListing(id: string): string[] {
-  const current = getSavedListingIds()
-  const next = current.includes(id)
-    ? current.filter((savedId) => savedId !== id)
-    : [...current, id]
+type CategoryResponse = { categoryId: number; name: string }
 
-  window.localStorage.setItem(SAVED_LISTINGS_KEY, next.join(","))
-  return next
+type ListingImageResponse = { listingImageId: string; imageUrl: string; imageOrder: number }
+
+type CursorPage<T> = { items: T[]; nextCursor: string | null }
+
+type FavoriteResponse = { listing: ListingResponse; savedAt: string }
+
+// Shown when a listing has no image metadata yet. Inline so an empty grid
+// never depends on the network or an outside host.
+const PLACEHOLDER_IMAGE =
+  "data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 400 300'%3E%3Crect width='400' height='300' fill='%23e9ebe7'/%3E%3Cpath d='M150 170l40-45 35 40 25-25 45 55H150z' fill='%23c7cdc4'/%3E%3Ccircle cx='160' cy='120' r='16' fill='%23c7cdc4'/%3E%3C/svg%3E"
+
+/** The exact condition values the backend accepts. */
+export const LISTING_CONDITIONS = ["New", "Great", "Good", "Fair", "Poor"]
+
+/** Sort options, paired with the values the backend's sort parameter takes. */
+export const LISTING_SORTS = [
+  { label: "Newest", value: "newest" },
+  { label: "Price: low to high", value: "priceAsc" },
+  { label: "Price: high to low", value: "priceDesc" },
+]
+
+// Categories are small, public, and change rarely, so the app fetches them
+// once per page load and every listing reuses the result.
+let categoryRequest: Promise<CategoryResponse[]> | null = null
+
+export function loadCategories(): Promise<CategoryResponse[]> {
+  if (!categoryRequest) {
+    categoryRequest = apiFetch<CategoryResponse[]>("/api/categories", { anonymous: true })
+      // A failed lookup must not be cached, or the whole session is stuck with
+      // listings that cannot name their category.
+      .catch((error) => {
+        categoryRequest = null
+        throw error
+      })
+  }
+
+  return categoryRequest
+}
+
+async function categoryNames(): Promise<Map<number, string>> {
+  const categories = await loadCategories()
+  return new Map(categories.map((category) => [category.categoryId, category.name]))
+}
+
+function toListing(
+  response: ListingResponse,
+  names: Map<number, string>,
+  image: string,
+): Listing {
+  return {
+    id: response.listingId,
+    title: response.title,
+    price: response.price,
+    category: names.get(response.categoryId) ?? "Other",
+    condition: response.condition,
+    // The backend stores these as optional and sends null when blank, but the
+    // cards and detail page render them as plain text.
+    location: response.location ?? "Campus",
+    image,
+    description: response.description ?? "",
+    status: response.status,
+    createdAt: response.createdAt,
+  }
+}
+
+export async function loadListingImages(
+  listingId: string,
+  signal?: AbortSignal,
+): Promise<string[]> {
+  const images = await apiFetch<ListingImageResponse[]>(
+    "/api/listings/" + encodeURIComponent(listingId) + "/images",
+    { signal },
+  )
+
+  return [...images]
+    .sort((a, b) => a.imageOrder - b.imageOrder)
+    .map((image) => image.imageUrl)
+}
+
+// Image metadata lives behind its own endpoint, so filling a grid costs one
+// request per listing on top of the search itself. At a page size of 20 that
+// is acceptable, and the requests run in parallel, but the real fix is for the
+// listing response to carry its cover URL. Worth raising with Sean rather than
+// working around here.
+async function attachCovers(
+  items: ListingResponse[],
+  names: Map<number, string>,
+  signal?: AbortSignal,
+): Promise<Listing[]> {
+  return Promise.all(
+    items.map(async (item) => {
+      let cover = PLACEHOLDER_IMAGE
+
+      try {
+        const images = await loadListingImages(item.listingId, signal)
+
+        if (images.length > 0) {
+          cover = images[0]
+        }
+      } catch {
+        // A listing whose images cannot be read is still a listing. Dropping
+        // it from the grid over a missing picture would hide a real item.
+      }
+
+      return toListing(item, names, cover)
+    }),
+  )
+}
+
+export type ListingQuery = {
+  q?: string
+  categoryId?: number
+  condition?: string
+  minPrice?: number
+  maxPrice?: number
+  sort?: string
+  limit?: number
+  cursor?: string
+}
+
+export type ListingPage = { items: Listing[]; nextCursor: string | null }
+
+/** Searches the signed-in user's university listings. */
+export async function searchListings(
+  query: ListingQuery = {},
+  signal?: AbortSignal,
+): Promise<ListingPage> {
+  const names = await categoryNames()
+
+  const page = await apiFetch<CursorPage<ListingResponse>>("/api/listings", {
+    query: {
+      q: query.q,
+      categoryId: query.categoryId,
+      condition: query.condition,
+      minPrice: query.minPrice,
+      maxPrice: query.maxPrice,
+      sort: query.sort,
+      limit: query.limit,
+      cursor: query.cursor,
+    },
+    signal,
+  })
+
+  return { items: await attachCovers(page.items, names, signal), nextCursor: page.nextCursor }
+}
+
+/** Reads one listing with all of its images, cover first. */
+export async function loadListing(
+  listingId: string,
+  signal?: AbortSignal,
+): Promise<{ listing: Listing; images: string[] }> {
+  const [names, response] = await Promise.all([
+    categoryNames(),
+    apiFetch<ListingResponse>("/api/listings/" + encodeURIComponent(listingId), { signal }),
+  ])
+
+  let images: string[] = []
+
+  try {
+    images = await loadListingImages(listingId, signal)
+  } catch {
+    // Same reasoning as the grid: show the item without its photos.
+  }
+
+  return {
+    listing: toListing(response, names, images[0] ?? PLACEHOLDER_IMAGE),
+    images,
+  }
+}
+
+// Saved listings now live in the database rather than this browser's
+// localStorage, so a user's shortlist follows them to another device and the
+// backend can enforce who is allowed to save what.
+
+const FAVORITE_PAGE_LIMIT = 100
+const MAX_FAVORITE_PAGES = 10
+
+async function loadFavoriteResponses(signal?: AbortSignal): Promise<FavoriteResponse[]> {
+  const all: FavoriteResponse[] = []
+  let cursor: string | null = null
+
+  // Bounded rather than an open loop: a cursor that never resolves to null
+  // would otherwise spin forever against a live feed.
+  for (let page = 0; page < MAX_FAVORITE_PAGES; page++) {
+    const result: CursorPage<FavoriteResponse> = await apiFetch<CursorPage<FavoriteResponse>>(
+      "/api/users/me/favorites",
+      { query: { limit: FAVORITE_PAGE_LIMIT, cursor }, signal },
+    )
+
+    all.push(...result.items)
+    cursor = result.nextCursor
+
+    if (!cursor) {
+      break
+    }
+  }
+
+  return all
+}
+
+/** The user's saved listings, newest save first. */
+export async function loadSavedListings(signal?: AbortSignal): Promise<Listing[]> {
+  const [names, favorites] = await Promise.all([
+    categoryNames(),
+    loadFavoriteResponses(signal),
+  ])
+
+  return attachCovers(
+    favorites.map((favorite) => favorite.listing),
+    names,
+    signal,
+  )
+}
+
+/** Just the ids, for deciding which hearts on a grid are filled in. */
+export async function loadSavedListingIds(signal?: AbortSignal): Promise<Set<string>> {
+  const favorites = await loadFavoriteResponses(signal)
+  return new Set(favorites.map((favorite) => favorite.listing.listingId))
+}
+
+/** What the create endpoint accepts. Mirrors CreateListingRequest. */
+export type NewListing = {
+  title: string
+  price: number
+  categoryId: number
+  condition: string
+  description?: string
+  location?: string
+}
+
+/**
+ * Publishes a listing and returns it, including the id the database assigned.
+ *
+ * Images are not part of this. The API stores links only, capped at 500
+ * characters, and the form's picked photos are local file data that nothing
+ * hosts yet. Publishing without them is a deliberate decision, not an omission.
+ */
+export async function createListing(listing: NewListing): Promise<Listing> {
+  const [names, response] = await Promise.all([
+    categoryNames(),
+    apiFetch<ListingResponse>("/api/listings", { method: "POST", body: listing }),
+  ])
+
+  return toListing(response, names, PLACEHOLDER_IMAGE)
+}
+
+export async function saveListing(listingId: string): Promise<void> {
+  await apiFetch<void>("/api/users/me/favorites/" + encodeURIComponent(listingId), {
+    method: "PUT",
+  })
+}
+
+export async function removeSavedListing(listingId: string): Promise<void> {
+  await apiFetch<void>("/api/users/me/favorites/" + encodeURIComponent(listingId), {
+    method: "DELETE",
+  })
 }

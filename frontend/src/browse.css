@@ -117,3 +117,50 @@
   .listing-detail-image img { aspect-ratio:1.35; }
   .saved-heading h1 { font-size:36px; }
 }
+
+/* Error text and paging controls for the backend-connected marketplace. */
+.browse-error {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid #e3b7b1;
+  border-radius: 10px;
+  background: #fdf3f1;
+  color: #8a3122;
+  font-size: 0.95rem;
+}
+
+.browse-load-more {
+  display: flex;
+  justify-content: center;
+  margin-top: 28px;
+}
+
+.browse-load-more button {
+  padding: 11px 26px;
+  border: 1px solid #c9d2c6;
+  border-radius: 999px;
+  background: #fff;
+  color: #2f3b30;
+  font: inherit;
+  cursor: pointer;
+}
+
+.browse-load-more button:hover:not(:disabled) {
+  background: #f1f4ef;
+}
+
+.browse-load-more button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.listing-detail-status {
+  display: inline-block;
+  margin: 0 0 12px;
+  padding: 5px 12px;
+  border-radius: 999px;
+  background: #f3efe2;
+  color: #6b5a24;
+  font-size: 0.9rem;
+  font-weight: 600;
+}

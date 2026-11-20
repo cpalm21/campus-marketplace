@@ -2684,3 +2684,24 @@ footer {
 }
 
 }
+
+/* Notice that picked photos are previews only until uploads exist. */
+.photo-notice {
+  margin: 0 0 14px;
+  padding: 9px 13px;
+  border: 1px solid #e0dcc8;
+  border-radius: 9px;
+  background: #fbf8ec;
+  color: #6b5a24;
+  font-size: 0.9rem;
+}
+
+.form-submit-error {
+  margin: 0 0 16px;
+  padding: 10px 14px;
+  border: 1px solid #e3b7b1;
+  border-radius: 10px;
+  background: #fdf3f1;
+  color: #8a3122;
+  font-size: 0.95rem;
+}

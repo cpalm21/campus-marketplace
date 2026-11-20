@@ -1,12 +1,18 @@
-import { useMemo, useState } from "react"
+import { useCallback, useEffect, useState } from "react"
 import type { ReactNode } from "react"
+import { useNavigate } from "react-router"
 import { ListingCard, MarketplaceLayout } from "./marketplaceComponents"
+import { errorMessage, isAbortError, isSessionExpired } from "./apiClient"
 import {
-  getSavedListingIds,
-  listings,
-  marketplaceCategories,
-  toggleSavedListing,
+  LISTING_CONDITIONS,
+  LISTING_SORTS,
+  loadCategories,
+  loadSavedListingIds,
+  removeSavedListing,
+  saveListing,
+  searchListings,
 } from "./marketplaceData"
+import type { Listing } from "./marketplaceData"
 import "./browse.css"
 
 function Icon({ name, size = 20 }: { name: "leaf" | "search" | "map" | "heart" | "sliders" | "menu" | "arrow"; size?: number }) {
@@ -22,29 +28,172 @@ function Icon({ name, size = 20 }: { name: "leaf" | "search" | "map" | "heart" |
   return <svg aria-hidden="true" fill="none" height={size} viewBox="0 0 24 24" width={size} stroke="currentColor" strokeLinecap="round" strokeLinejoin="round" strokeWidth="1.8">{paths[name]}</svg>
 }
 
+const ALL_CATEGORIES = "All"
+const ALL_CONDITIONS = "All conditions"
+
 export default function Browse() {
+  const navigate = useNavigate()
+
   const [search, setSearch] = useState("")
-  const [category, setCategory] = useState("All")
-  const [condition, setCondition] = useState("All conditions")
-  const [sort, setSort] = useState("Newest")
-  const [saved, setSaved] = useState(getSavedListingIds)
+  // Searching is a backend query now, so the typed value is held back briefly
+  // rather than sending a request for every keystroke.
+  const [query, setQuery] = useState("")
+  const [categories, setCategories] = useState<{ categoryId: number; name: string }[]>([])
+  const [categoryId, setCategoryId] = useState<number | null>(null)
+  const [condition, setCondition] = useState(ALL_CONDITIONS)
+  const [sort, setSort] = useState("newest")
 
-  const filteredListings = useMemo(() => {
-    const query = search.trim().toLowerCase()
-    const filtered = listings.filter((listing) => {
-      const matchesSearch = !query || `${listing.title} ${listing.category} ${listing.location}`.toLowerCase().includes(query)
-      const matchesCategory = category === "All" || listing.category === category
-      const matchesCondition = condition === "All conditions" || listing.condition === condition
-      return matchesSearch && matchesCategory && matchesCondition
+  const [listings, setListings] = useState<Listing[]>([])
+  const [nextCursor, setNextCursor] = useState<string | null>(null)
+  const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
+  const [error, setError] = useState("")
+  // Bumped by "Try again" to re-run the search effect. Re-setting a filter to
+  // the value it already holds would not, since React skips equal updates.
+  const [reloadToken, setReloadToken] = useState(0)
+
+  const [saved, setSaved] = useState<Set<string>>(new Set())
+  const [saveError, setSaveError] = useState("")
+
+  // Send the user to log in rather than showing an error they cannot act on.
+  const handleError = useCallback(
+    (err: unknown, setMessage: (message: string) => void) => {
+      if (isAbortError(err)) {
+        return
+      }
+
+      if (isSessionExpired(err)) {
+        navigate("/login?next=" + encodeURIComponent("/browse"), { replace: true })
+        return
+      }
+
+      setMessage(errorMessage(err))
+    },
+    [navigate],
+  )
+
+  useEffect(() => {
+    const timer = setTimeout(() => setQuery(search.trim()), 300)
+    return () => clearTimeout(timer)
+  }, [search])
+
+  useEffect(() => {
+    loadCategories()
+      .then(setCategories)
+      // The grid still works without category names, so a failure here only
+      // costs the filter chips.
+      .catch(() => setCategories([]))
+  }, [])
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    setLoading(true)
+    setError("")
+
+    searchListings(
+      {
+        q: query,
+        categoryId: categoryId ?? undefined,
+        condition: condition === ALL_CONDITIONS ? undefined : condition,
+        sort,
+      },
+      controller.signal,
+    )
+      .then((page) => {
+        setListings(page.items)
+        setNextCursor(page.nextCursor)
+      })
+      .catch((err) => handleError(err, setError))
+      .finally(() => {
+        if (!controller.signal.aborted) {
+          setLoading(false)
+        }
+      })
+
+    return () => controller.abort()
+  }, [query, categoryId, condition, sort, reloadToken, handleError])
+
+  useEffect(() => {
+    const controller = new AbortController()
+
+    loadSavedListingIds(controller.signal)
+      .then(setSaved)
+      // Hearts default to empty if this fails; saving still works.
+      .catch(() => undefined)
+
+    return () => controller.abort()
+  }, [])
+
+  function loadMore() {
+    if (!nextCursor || loadingMore) {
+      return
+    }
+
+    setLoadingMore(true)
+
+    searchListings({
+      q: query,
+      categoryId: categoryId ?? undefined,
+      condition: condition === ALL_CONDITIONS ? undefined : condition,
+      sort,
+      cursor: nextCursor,
     })
+      .then((page) => {
+        setListings((current) => [...current, ...page.items])
+        setNextCursor(page.nextCursor)
+      })
+      .catch((err) => handleError(err, setError))
+      .finally(() => setLoadingMore(false))
+  }
 
-    if (sort === "Price: low to high") return [...filtered].sort((a, b) => a.price - b.price)
-    if (sort === "Price: high to low") return [...filtered].sort((a, b) => b.price - a.price)
-    return filtered
-  }, [search, category, condition, sort])
+  async function toggleSaved(id: string) {
+    const wasSaved = saved.has(id)
 
-  function toggleSaved(id: string) {
-    setSaved(toggleSavedListing(id))
+    // Update the heart immediately; the request usually succeeds, and waiting
+    // on a round trip makes the button feel broken.
+    setSaved((current) => {
+      const next = new Set(current)
+
+      if (wasSaved) {
+        next.delete(id)
+      } else {
+        next.add(id)
+      }
+
+      return next
+    })
+    setSaveError("")
+
+    try {
+      if (wasSaved) {
+        await removeSavedListing(id)
+      } else {
+        await saveListing(id)
+      }
+    } catch (err) {
+      // Put the heart back. The backend refuses some saves on purpose: your
+      // own listing is 403 and an item that has sold is 409, and the user
+      // should see why rather than a heart that silently reverts.
+      setSaved((current) => {
+        const next = new Set(current)
+
+        if (wasSaved) {
+          next.add(id)
+        } else {
+          next.delete(id)
+        }
+
+        return next
+      })
+      handleError(err, setSaveError)
+    }
+  }
+
+  function clearFilters() {
+    setSearch("")
+    setCategoryId(null)
+    setCondition(ALL_CONDITIONS)
   }
 
   return (
@@ -61,30 +210,46 @@ export default function Browse() {
         <section className="browse-results">
           <div className="browse-container">
             <div className="category-row" aria-label="Listing categories">
-              {marketplaceCategories.map((item) => <button className={category === item ? "category-chip active" : "category-chip"} type="button" key={item} onClick={() => setCategory(item)}>{item}</button>)}
+              <button className={categoryId === null ? "category-chip active" : "category-chip"} type="button" onClick={() => setCategoryId(null)}>{ALL_CATEGORIES}</button>
+              {categories.map((item) => <button className={categoryId === item.categoryId ? "category-chip active" : "category-chip"} type="button" key={item.categoryId} onClick={() => setCategoryId(item.categoryId)}>{item.name}</button>)}
             </div>
 
             <div className="results-toolbar">
-              <div><strong>{filteredListings.length}</strong> items available</div>
+              <div>{loading ? "Loading items..." : <><strong>{listings.length}</strong> items available</>}</div>
               <div className="browse-filters">
-                <label><Icon name="sliders" /><span className="sr-only">Condition</span><select value={condition} onChange={(event) => setCondition(event.target.value)}><option>All conditions</option><option>Excellent</option><option>Like new</option><option>Good</option><option>Fair</option></select></label>
-                <label><span className="sr-only">Sort</span><select value={sort} onChange={(event) => setSort(event.target.value)}><option>Newest</option><option>Price: low to high</option><option>Price: high to low</option></select></label>
+                <label><Icon name="sliders" /><span className="sr-only">Condition</span><select value={condition} onChange={(event) => setCondition(event.target.value)}><option>{ALL_CONDITIONS}</option>{LISTING_CONDITIONS.map((value) => <option key={value}>{value}</option>)}</select></label>
+                <label><span className="sr-only">Sort</span><select value={sort} onChange={(event) => setSort(event.target.value)}>{LISTING_SORTS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}</select></label>
               </div>
             </div>
 
-            {filteredListings.length > 0 ? (
-              <div className="marketplace-grid">
-                {filteredListings.map((listing) => (
-                  <ListingCard
-                    key={listing.id}
-                    listing={listing}
-                    saved={saved.includes(listing.id)}
-                    onToggleSaved={toggleSaved}
-                  />
-                ))}
-              </div>
+            {saveError ? <p role="alert" className="browse-error">{saveError}</p> : null}
+
+            {error ? (
+              <div className="browse-empty"><h2>We could not load the marketplace</h2><p>{error}</p><button type="button" onClick={() => setReloadToken((current) => current + 1)}>Try again</button></div>
+            ) : loading ? (
+              <div className="browse-empty"><h2>Loading listings</h2><p>Fetching items from your campus.</p></div>
+            ) : listings.length > 0 ? (
+              <>
+                <div className="marketplace-grid">
+                  {listings.map((listing) => (
+                    <ListingCard
+                      key={listing.id}
+                      listing={listing}
+                      saved={saved.has(listing.id)}
+                      onToggleSaved={toggleSaved}
+                    />
+                  ))}
+                </div>
+                {nextCursor ? (
+                  <div className="browse-load-more">
+                    <button type="button" onClick={loadMore} disabled={loadingMore}>
+                      {loadingMore ? "Loading..." : "Load more"}
+                    </button>
+                  </div>
+                ) : null}
+              </>
             ) : (
-              <div className="browse-empty"><h2>No items match those filters</h2><p>Try a different search or category.</p><button type="button" onClick={() => { setSearch(""); setCategory("All"); setCondition("All conditions") }}>Clear filters</button></div>
+              <div className="browse-empty"><h2>No items match those filters</h2><p>Try a different search or category.</p><button type="button" onClick={clearFilters}>Clear filters</button></div>
             )}
           </div>
         </section>
