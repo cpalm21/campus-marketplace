@@ -18,11 +18,14 @@ import org.springframework.stereotype.Repository;
 public class MessageRepository {
 
 	/**
-	 * sent_at is read defensively because the column is still nullable: the
-	 * migration that makes it NOT NULL has not been applied yet. Once it has,
-	 * the null branch is unreachable and can go, matching
+	 * sent_at is read without a null guard because the column is NOT NULL as
+	 * of the messaging migration, matching
 	 * {@link edu.udel.campusmarketplace.listing.ListingRepository}, which
-	 * reads created_at without a guard because its migration already ran.
+	 * reads created_at the same way.
+	 *
+	 * The timestamp columns are TIMESTAMP rather than TIMESTAMPTZ, so they
+	 * carry no zone and are read as UTC here. application.properties sets the
+	 * connection's time zone to UTC so that the value written matches.
 	 */
 	private static final RowMapper<Message> ROW_MAPPER = (rs, rowNum) -> new Message(
 			rs.getObject("message_id", UUID.class),
@@ -30,9 +33,7 @@ public class MessageRepository {
 			rs.getObject("sender_id", UUID.class),
 			rs.getObject("receiver_id", UUID.class),
 			rs.getString("message"),
-			rs.getObject("sent_at", LocalDateTime.class) == null
-					? null
-					: rs.getObject("sent_at", LocalDateTime.class).toInstant(ZoneOffset.UTC),
+			rs.getObject("sent_at", LocalDateTime.class).toInstant(ZoneOffset.UTC),
 			rs.getBoolean("is_read"));
 
 	private final JdbcTemplate jdbcTemplate;
