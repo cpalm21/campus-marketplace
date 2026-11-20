@@ -24,7 +24,7 @@ import java.util.UUID;
  * "have I opened this thread". There is no separate flag for each side,
  * because messages.is_read is a single column.
  */
-record MessageResponse(UUID messageId, String text, Instant sentAt, boolean isMine, boolean isRead) {
+public record MessageResponse(UUID messageId, String text, Instant sentAt, boolean isMine, boolean isRead) {
 
 	/**
 	 * Builds the view of a message as one particular student sees it.

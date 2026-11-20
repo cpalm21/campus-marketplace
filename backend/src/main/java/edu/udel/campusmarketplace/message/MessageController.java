@@ -42,43 +42,30 @@ public class MessageController {
 	}
 
 	/**
-	 * Sends a message about a listing.
+	 * Sends a message to the seller of a listing.
 	 *
 	 * The identity is established before the body is looked at, so an
 	 * unauthenticated caller gets 401 and learns nothing about which fields
-	 * this endpoint would have complained about. The verified identity is not
-	 * needed yet; what matters is that verify() throws when the token does not
-	 * hold up.
+	 * this endpoint would have complained about.
 	 *
-	 * Nothing is stored yet, so the success case is 204 with an empty body:
-	 * the request was accepted as well-formed and there is nothing to report.
-	 * Returning 201 with a resource would be a lie the frontend could build
-	 * on. The same placeholder was used for POST /api/listings before its
-	 * repository existed.
-	 *
-	 * listingId is bound but unused for now. It is in the signature already so
-	 * that the route is the real one from the start, rather than a path that
-	 * has to change once the lookup arrives.
+	 * Responds 201 with the stored message. There is no Location header, which
+	 * is a deliberate difference from POST /api/listings: a single message has
+	 * no endpoint of its own to point at, since messages are only ever read a
+	 * thread at a time. Inventing GET /api/messages/{id} just to satisfy the
+	 * header would add a route nothing calls.
 	 *
 	 * The header is optional to Spring only so that a missing one fails as 401
 	 * from the verifier rather than as a generic 400, matching
 	 * {@link edu.udel.campusmarketplace.user.UserController}.
-	 *
-	 * TODO Resolve the sender through CurrentUserService, confirm the listing
-	 * exists within their university, derive the receiver from its seller,
-	 * reject messaging your own listing, insert, and return 201 with the
-	 * stored message once MessageRepository exists.
 	 */
 	@PostMapping
-	@ResponseStatus(HttpStatus.NO_CONTENT)
-	public void send(
+	@ResponseStatus(HttpStatus.CREATED)
+	public MessageResponse send(
 			@RequestHeader(value = HttpHeaders.AUTHORIZATION, required = false) String authorization,
 			@PathVariable UUID listingId,
 			@RequestBody SendMessageRequest request) {
 
-		tokenVerifier.verify(authorization);
-
-		messageService.validate(request);
+		return messageService.send(tokenVerifier.verify(authorization), listingId, request);
 	}
 
 }
